@@ -1,40 +1,137 @@
 targetScope = 'resourceGroup'
 
+// ==================================================
+// Parameters
+// ==================================================
+
+@description('Choose whether to create a new Log Analytics workspace or use an existing one.')
 @allowed([
   'CreateNew'
   'UseExisting'
 ])
 param workspaceMode string = 'CreateNew'
 
-@description('Location for resources in this resource group.')
+@description('Deployment location. This should not be changed and defaults to the resource group location.')
 param location string = resourceGroup().location
 
-// Scenario 1
-@description('New Log Analytics workspace name (used only when workspaceMode=CreateNew).')
+// ---------------------------
+// New workspace (CreateNew)
+// ---------------------------
+
+@description('Name of the new Log Analytics workspace. Only used when WorkspaceMode is set to CreateNew. Ignored when using an existing workspace.')
 param newWorkspaceName string = 'law-PowerStacksEnhancedInventory'
 
-// Scenario 2
-@description('Existing workspace subscription id (used only when workspaceMode=UseExisting).')
+// ---------------------------
+// Existing workspace (UseExisting)
+// ---------------------------
+
+@description('Subscription ID of the existing Log Analytics workspace. Required only when WorkspaceMode is set to UseExisting. Leave blank when creating a new workspace.')
 param existingWorkspaceSubscriptionId string = subscription().subscriptionId
 
-@description('Existing workspace resource group name (used only when workspaceMode=UseExisting).')
+@description('Resource group name of the existing Log Analytics workspace. Required only when WorkspaceMode is set to UseExisting.')
 param existingWorkspaceResourceGroup string = ''
 
-@description('Existing workspace name (used only when workspaceMode=UseExisting).')
+@description('Name of the existing Log Analytics workspace. Required only when WorkspaceMode is set to UseExisting.')
 param existingWorkspaceName string = ''
 
-@description('Data Collection Endpoint name.')
+// ---------------------------
+// DCE / DCR
+// ---------------------------
+
+@description('Name of the Data Collection Endpoint (DCE) to create.')
 param dceName string = 'dce-PowerStacksInventory'
 
-@description('Data Collection Rule name.')
+@description('Name of the Data Collection Rule (DCR) to create.')
 param dcrName string = 'dcr-PowerStacksInventory'
 
-@description('OPTIONAL: Service principal OBJECT ID for the ingestion app. If blank, RBAC assignment is skipped.')
+// ---------------------------
+// Optional RBAC
+// ---------------------------
+
+@description('Optional. Object ID of the service principal used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment.')
 param ingestionSpObjectId string = ''
 
-// ---------------------------
+// ==================================================
+// Names
+// ==================================================
+
+var deviceTableName = 'PowerStacksDeviceInventory_CL'
+var appTableName    = 'PowerStacksAppInventory_CL'
+var driverTableName = 'PowerStacksDriverInventory_CL'
+
+// ==================================================
+// Schemas (define once, reuse everywhere)
+// ==================================================
+
+var deviceColumns = [
+  { name: 'TimeGenerated', type: 'datetime' }
+  { name: 'ComputerName_s', type: 'string' }
+  { name: 'ManagedDeviceID_g', type: 'string' }
+  { name: 'Microsoft365_b', type: 'boolean' }
+  { name: 'Warranty_b', type: 'boolean' }
+  { name: 'DeviceDetails1_s', type: 'string' }
+  { name: 'DeviceDetails2_s', type: 'string' }
+  { name: 'DeviceDetails3_s', type: 'string' }
+  { name: 'DeviceDetails4_s', type: 'string' }
+  { name: 'DeviceDetails5_s', type: 'string' }
+  { name: 'DeviceDetails6_s', type: 'string' }
+  { name: 'DeviceDetails7_s', type: 'string' }
+  { name: 'DeviceDetails8_s', type: 'string' }
+  { name: 'DeviceDetails9_s', type: 'string' }
+  { name: 'DeviceDetails10_s', type: 'string' }
+]
+
+var appColumns = [
+  { name: 'TimeGenerated', type: 'datetime' }
+  { name: 'ComputerName_s', type: 'string' }
+  { name: 'ManagedDeviceID_g', type: 'string' }
+  { name: 'InstalledApps1_s', type: 'string' }
+  { name: 'InstalledApps2_s', type: 'string' }
+  { name: 'InstalledApps3_s', type: 'string' }
+  { name: 'InstalledApps4_s', type: 'string' }
+  { name: 'InstalledApps5_s', type: 'string' }
+  { name: 'InstalledApps6_s', type: 'string' }
+  { name: 'InstalledApps7_s', type: 'string' }
+  { name: 'InstalledApps8_s', type: 'string' }
+  { name: 'InstalledApps9_s', type: 'string' }
+  { name: 'InstalledApps10_s', type: 'string' }
+]
+
+var driverColumns = [
+  { name: 'TimeGenerated', type: 'datetime' }
+  { name: 'ComputerName_s', type: 'string' }
+  { name: 'ManagedDeviceID_g', type: 'string' }
+  { name: 'ListedDrivers1_s', type: 'string' }
+  { name: 'ListedDrivers2_s', type: 'string' }
+  { name: 'ListedDrivers3_s', type: 'string' }
+  { name: 'ListedDrivers4_s', type: 'string' }
+  { name: 'ListedDrivers5_s', type: 'string' }
+  { name: 'ListedDrivers6_s', type: 'string' }
+  { name: 'ListedDrivers7_s', type: 'string' }
+  { name: 'ListedDrivers8_s', type: 'string' }
+  { name: 'ListedDrivers9_s', type: 'string' }
+  { name: 'ListedDrivers10_s', type: 'string' }
+]
+
+var deviceTableSchema = {
+  name: deviceTableName
+  columns: deviceColumns
+}
+
+var appTableSchema = {
+  name: appTableName
+  columns: appColumns
+}
+
+var driverTableSchema = {
+  name: driverTableName
+  columns: driverColumns
+}
+
+// ==================================================
 // Workspace (new or existing)
-// ---------------------------
+// ==================================================
+
 resource lawNew 'Microsoft.OperationalInsights/workspaces@2022-10-01' = if (workspaceMode == 'CreateNew') {
   name: newWorkspaceName
   location: location
@@ -57,193 +154,56 @@ resource lawExisting 'Microsoft.OperationalInsights/workspaces@2022-10-01' exist
   scope: existingRg
 }
 
-var workspaceResourceId = workspaceMode == 'CreateNew' ? lawNew.id : lawExisting.id
+var workspaceResourceId    = workspaceMode == 'CreateNew' ? lawNew.id : lawExisting.id
 var workspaceNameEffective = workspaceMode == 'CreateNew' ? lawNew.name : lawExisting.name
 
-// ---------------------------
-// Tables (3)
-// ---------------------------
+// ==================================================
+// Tables (create/update under selected workspace)
+// ==================================================
 
-var deviceTableName = 'PowerStacksDeviceInventory_CL'
-var appTableName    = 'PowerStacksAppInventory_CL'
-var driverTableName = 'PowerStacksDriverInventory_CL'
-
-// Create tables under NEW workspace
-resource deviceTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
+resource deviceTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
   name: '${workspaceNameEffective}/${deviceTableName}'
   properties: {
     plan: 'Analytics'
-    schema: {
-      name: deviceTableName
-      columns: [
-        { name: 'TimeGenerated', type: 'datetime' }
-        { name: 'ComputerName_s', type: 'string' }
-        { name: 'ManagedDeviceID_g', type: 'string' }
-        { name: 'Microsoft365_b', type: 'boolean' }
-        { name: 'Warranty_b', type: 'boolean' }
-        { name: 'DeviceDetails1_s', type: 'string' }
-        { name: 'DeviceDetails2_s', type: 'string' }
-        { name: 'DeviceDetails3_s', type: 'string' }
-        { name: 'DeviceDetails4_s', type: 'string' }
-        { name: 'DeviceDetails5_s', type: 'string' }
-        { name: 'DeviceDetails6_s', type: 'string' }
-        { name: 'DeviceDetails7_s', type: 'string' }
-        { name: 'DeviceDetails8_s', type: 'string' }
-        { name: 'DeviceDetails9_s', type: 'string' }
-        { name: 'DeviceDetails10_s', type: 'string' }
-      ]
-    }
+    schema: deviceTableSchema
   }
-  dependsOn: [lawNew]
 }
 
-resource appTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
+resource appTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
   name: '${workspaceNameEffective}/${appTableName}'
   properties: {
     plan: 'Analytics'
-    schema: {
-      name: appTableName
-      columns: [
-        { name: 'TimeGenerated', type: 'datetime' }
-        { name: 'ComputerName_s', type: 'string' }
-        { name: 'ManagedDeviceID_g', type: 'string' }
-        { name: 'InstalledApps1_s', type: 'string' }
-        { name: 'InstalledApps2_s', type: 'string' }
-        { name: 'InstalledApps3_s', type: 'string' }
-        { name: 'InstalledApps4_s', type: 'string' }
-        { name: 'InstalledApps5_s', type: 'string' }
-        { name: 'InstalledApps6_s', type: 'string' }
-        { name: 'InstalledApps7_s', type: 'string' }
-        { name: 'InstalledApps8_s', type: 'string' }
-        { name: 'InstalledApps9_s', type: 'string' }
-        { name: 'InstalledApps10_s', type: 'string' }
-      ]
-    }
+    schema: appTableSchema
   }
-  dependsOn: [lawNew]
 }
 
-resource driverTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
+resource driverTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
   name: '${workspaceNameEffective}/${driverTableName}'
   properties: {
     plan: 'Analytics'
-    schema: {
-      name: driverTableName
-      columns: [
-        { name: 'TimeGenerated', type: 'datetime' }
-        { name: 'ComputerName_s', type: 'string' }
-        { name: 'ManagedDeviceID_g', type: 'string' }
-        { name: 'ListedDrivers1_s', type: 'string' }
-        { name: 'ListedDrivers2_s', type: 'string' }
-        { name: 'ListedDrivers3_s', type: 'string' }
-        { name: 'ListedDrivers4_s', type: 'string' }
-        { name: 'ListedDrivers5_s', type: 'string' }
-        { name: 'ListedDrivers6_s', type: 'string' }
-        { name: 'ListedDrivers7_s', type: 'string' }
-        { name: 'ListedDrivers8_s', type: 'string' }
-        { name: 'ListedDrivers9_s', type: 'string' }
-        { name: 'ListedDrivers10_s', type: 'string' }
-      ]
-    }
-  }
-  dependsOn: [lawNew]
-}
-
-// Create tables under EXISTING workspace
-resource deviceTableExisting 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'UseExisting') {
-  name: '${workspaceNameEffective}/${deviceTableName}'
-  properties: {
-    plan: 'Analytics'
-    schema: {
-      name: deviceTableName
-      columns: [
-        { name: 'TimeGenerated', type: 'datetime' }
-        { name: 'ComputerName_s', type: 'string' }
-        { name: 'ManagedDeviceID_g', type: 'string' }
-        { name: 'Microsoft365_b', type: 'boolean' }
-        { name: 'Warranty_b', type: 'boolean' }
-        { name: 'DeviceDetails1_s', type: 'string' }
-        { name: 'DeviceDetails2_s', type: 'string' }
-        { name: 'DeviceDetails3_s', type: 'string' }
-        { name: 'DeviceDetails4_s', type: 'string' }
-        { name: 'DeviceDetails5_s', type: 'string' }
-        { name: 'DeviceDetails6_s', type: 'string' }
-        { name: 'DeviceDetails7_s', type: 'string' }
-        { name: 'DeviceDetails8_s', type: 'string' }
-        { name: 'DeviceDetails9_s', type: 'string' }
-        { name: 'DeviceDetails10_s', type: 'string' }
-      ]
-    }
+    schema: driverTableSchema
   }
 }
 
-resource appTableExisting 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'UseExisting') {
-  name: '${workspaceNameEffective}/${appTableName}'
-  properties: {
-    plan: 'Analytics'
-    schema: {
-      name: appTableName
-      columns: [
-        { name: 'TimeGenerated', type: 'datetime' }
-        { name: 'ComputerName_s', type: 'string' }
-        { name: 'ManagedDeviceID_g', type: 'string' }
-        { name: 'InstalledApps1_s', type: 'string' }
-        { name: 'InstalledApps2_s', type: 'string' }
-        { name: 'InstalledApps3_s', type: 'string' }
-        { name: 'InstalledApps4_s', type: 'string' }
-        { name: 'InstalledApps5_s', type: 'string' }
-        { name: 'InstalledApps6_s', type: 'string' }
-        { name: 'InstalledApps7_s', type: 'string' }
-        { name: 'InstalledApps8_s', type: 'string' }
-        { name: 'InstalledApps9_s', type: 'string' }
-        { name: 'InstalledApps10_s', type: 'string' }
-      ]
-    }
-  }
-}
-
-resource driverTableExisting 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'UseExisting') {
-  name: '${workspaceNameEffective}/${driverTableName}'
-  properties: {
-    plan: 'Analytics'
-    schema: {
-      name: driverTableName
-      columns: [
-        { name: 'TimeGenerated', type: 'datetime' }
-        { name: 'ComputerName_s', type: 'string' }
-        { name: 'ManagedDeviceID_g', type: 'string' }
-        { name: 'ListedDrivers1_s', type: 'string' }
-        { name: 'ListedDrivers2_s', type: 'string' }
-        { name: 'ListedDrivers3_s', type: 'string' }
-        { name: 'ListedDrivers4_s', type: 'string' }
-        { name: 'ListedDrivers5_s', type: 'string' }
-        { name: 'ListedDrivers6_s', type: 'string' }
-        { name: 'ListedDrivers7_s', type: 'string' }
-        { name: 'ListedDrivers8_s', type: 'string' }
-        { name: 'ListedDrivers9_s', type: 'string' }
-        { name: 'ListedDrivers10_s', type: 'string' }
-      ]
-    }
-  }
-}
-
-// ---------------------------
+// ==================================================
 // DCE
-// ---------------------------
+// ==================================================
+
 resource dce 'Microsoft.Insights/dataCollectionEndpoints@2024-03-11' = {
   name: dceName
   location: location
   properties: {
-    description: 'DCE for PowerStacks inventory ingestion'
+    description: 'DCE for PowerStacks Enhanced Inventory ingestion'
     networkAcls: {
       publicNetworkAccess: 'Enabled'
     }
   }
 }
 
-// ---------------------------
-// DCR (3 streams -> 3 tables)
-// ---------------------------
+// ==================================================
+// DCR
+// ==================================================
+
 resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   name: dcrName
   location: location
@@ -262,57 +222,13 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
 
     streamDeclarations: {
       'Custom-PowerStacksDeviceInventory': {
-        columns: [
-          { name: 'TimeGenerated', type: 'datetime' }
-          { name: 'ComputerName_s', type: 'string' }
-          { name: 'ManagedDeviceID_g', type: 'string' }
-          { name: 'Microsoft365_b', type: 'boolean' }
-          { name: 'Warranty_b', type: 'boolean' }
-          { name: 'DeviceDetails1_s', type: 'string' }
-          { name: 'DeviceDetails2_s', type: 'string' }
-          { name: 'DeviceDetails3_s', type: 'string' }
-          { name: 'DeviceDetails4_s', type: 'string' }
-          { name: 'DeviceDetails5_s', type: 'string' }
-          { name: 'DeviceDetails6_s', type: 'string' }
-          { name: 'DeviceDetails7_s', type: 'string' }
-          { name: 'DeviceDetails8_s', type: 'string' }
-          { name: 'DeviceDetails9_s', type: 'string' }
-          { name: 'DeviceDetails10_s', type: 'string' }
-        ]
+        columns: deviceColumns
       }
       'Custom-PowerStacksAppInventory': {
-        columns: [
-          { name: 'TimeGenerated', type: 'datetime' }
-          { name: 'ComputerName_s', type: 'string' }
-          { name: 'ManagedDeviceID_g', type: 'string' }
-          { name: 'InstalledApps1_s', type: 'string' }
-          { name: 'InstalledApps2_s', type: 'string' }
-          { name: 'InstalledApps3_s', type: 'string' }
-          { name: 'InstalledApps4_s', type: 'string' }
-          { name: 'InstalledApps5_s', type: 'string' }
-          { name: 'InstalledApps6_s', type: 'string' }
-          { name: 'InstalledApps7_s', type: 'string' }
-          { name: 'InstalledApps8_s', type: 'string' }
-          { name: 'InstalledApps9_s', type: 'string' }
-          { name: 'InstalledApps10_s', type: 'string' }
-        ]
+        columns: appColumns
       }
       'Custom-PowerStacksDriverInventory': {
-        columns: [
-          { name: 'TimeGenerated', type: 'datetime' }
-          { name: 'ComputerName_s', type: 'string' }
-          { name: 'ManagedDeviceID_g', type: 'string' }
-          { name: 'ListedDrivers1_s', type: 'string' }
-          { name: 'ListedDrivers2_s', type: 'string' }
-          { name: 'ListedDrivers3_s', type: 'string' }
-          { name: 'ListedDrivers4_s', type: 'string' }
-          { name: 'ListedDrivers5_s', type: 'string' }
-          { name: 'ListedDrivers6_s', type: 'string' }
-          { name: 'ListedDrivers7_s', type: 'string' }
-          { name: 'ListedDrivers8_s', type: 'string' }
-          { name: 'ListedDrivers9_s', type: 'string' }
-          { name: 'ListedDrivers10_s', type: 'string' }
-        ]
+        columns: driverColumns
       }
     }
 
@@ -320,25 +236,29 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
       {
         streams: [ 'Custom-PowerStacksDeviceInventory' ]
         destinations: [ 'la' ]
-        outputStream: 'Custom-PowerStacksDeviceInventory_CL'
+        outputStream: deviceTableName
       }
       {
         streams: [ 'Custom-PowerStacksAppInventory' ]
         destinations: [ 'la' ]
-        outputStream: 'Custom-PowerStacksAppInventory_CL'
+        outputStream: appTableName
       }
       {
         streams: [ 'Custom-PowerStacksDriverInventory' ]
         destinations: [ 'la' ]
-        outputStream: 'Custom-PowerStacksDriverInventory_CL'
+        outputStream: driverTableName
       }
     ]
   }
 }
 
-// ---------------------------
-// RBAC on DCR (optional)
-// ---------------------------
+// ==================================================
+// Optional RBAC on the DCR
+// ==================================================
+
+// NOTE: This is the role definition id used previously in your template.
+// If you decide to switch to the documented Microsoft.Insights/Telemetry/Write role id later,
+// change it here in one place.
 var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   '3913510d-42f4-4e42-8a64-420c390055eb'
@@ -354,9 +274,10 @@ resource dcrRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!emp
   }
 }
 
-// ---------------------------
-// Outputs for endpoint scripts
-// ---------------------------
+// ==================================================
+// Outputs
+// ==================================================
+
 output DceURI string = dce.properties.logsIngestion.endpoint
 output DcrImmutableId string = dcr.properties.immutableId
 output WorkspaceResourceId string = workspaceResourceId

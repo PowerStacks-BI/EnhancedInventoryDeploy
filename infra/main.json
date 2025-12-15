@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "5106328951120788673"
+      "templateHash": "3657735473763688492"
     }
   },
   "parameters": {
@@ -15,71 +15,256 @@
       "allowedValues": [
         "CreateNew",
         "UseExisting"
-      ]
+      ],
+      "metadata": {
+        "description": "Choose whether to create a new Log Analytics workspace or use an existing one."
+      }
     },
     "location": {
       "type": "string",
       "defaultValue": "[resourceGroup().location]",
       "metadata": {
-        "description": "Location for resources in this resource group."
+        "description": "Deployment location. This should not be changed and defaults to the resource group location."
       }
     },
     "newWorkspaceName": {
       "type": "string",
       "defaultValue": "law-PowerStacksEnhancedInventory",
       "metadata": {
-        "description": "New Log Analytics workspace name (used only when workspaceMode=CreateNew)."
+        "description": "Name of the new Log Analytics workspace. Only used when WorkspaceMode is set to CreateNew. Ignored when using an existing workspace."
       }
     },
     "existingWorkspaceSubscriptionId": {
       "type": "string",
       "defaultValue": "[subscription().subscriptionId]",
       "metadata": {
-        "description": "Existing workspace subscription id (used only when workspaceMode=UseExisting)."
+        "description": "Subscription ID of the existing Log Analytics workspace. Required only when WorkspaceMode is set to UseExisting. Leave blank when creating a new workspace."
       }
     },
     "existingWorkspaceResourceGroup": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Existing workspace resource group name (used only when workspaceMode=UseExisting)."
+        "description": "Resource group name of the existing Log Analytics workspace. Required only when WorkspaceMode is set to UseExisting."
       }
     },
     "existingWorkspaceName": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Existing workspace name (used only when workspaceMode=UseExisting)."
+        "description": "Name of the existing Log Analytics workspace. Required only when WorkspaceMode is set to UseExisting."
       }
     },
     "dceName": {
       "type": "string",
       "defaultValue": "dce-PowerStacksInventory",
       "metadata": {
-        "description": "Data Collection Endpoint name."
+        "description": "Name of the Data Collection Endpoint (DCE) to create."
       }
     },
     "dcrName": {
       "type": "string",
       "defaultValue": "dcr-PowerStacksInventory",
       "metadata": {
-        "description": "Data Collection Rule name."
+        "description": "Name of the Data Collection Rule (DCR) to create."
       }
     },
     "ingestionSpObjectId": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "OPTIONAL: Service principal OBJECT ID for the ingestion app. If blank, RBAC assignment is skipped."
+        "description": "Optional. Object ID of the service principal used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment."
       }
     }
   },
   "variables": {
-    "workspaceResourceId": "[if(equals(parameters('workspaceMode'), 'CreateNew'), resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.OperationalInsights/workspaces', parameters('existingWorkspaceName')))]",
-    "workspaceNameEffective": "[if(equals(parameters('workspaceMode'), 'CreateNew'), parameters('newWorkspaceName'), parameters('existingWorkspaceName'))]",
     "deviceTableName": "PowerStacksDeviceInventory_CL",
     "appTableName": "PowerStacksAppInventory_CL",
     "driverTableName": "PowerStacksDriverInventory_CL",
+    "deviceColumns": [
+      {
+        "name": "TimeGenerated",
+        "type": "datetime"
+      },
+      {
+        "name": "ComputerName_s",
+        "type": "string"
+      },
+      {
+        "name": "ManagedDeviceID_g",
+        "type": "string"
+      },
+      {
+        "name": "Microsoft365_b",
+        "type": "boolean"
+      },
+      {
+        "name": "Warranty_b",
+        "type": "boolean"
+      },
+      {
+        "name": "DeviceDetails1_s",
+        "type": "string"
+      },
+      {
+        "name": "DeviceDetails2_s",
+        "type": "string"
+      },
+      {
+        "name": "DeviceDetails3_s",
+        "type": "string"
+      },
+      {
+        "name": "DeviceDetails4_s",
+        "type": "string"
+      },
+      {
+        "name": "DeviceDetails5_s",
+        "type": "string"
+      },
+      {
+        "name": "DeviceDetails6_s",
+        "type": "string"
+      },
+      {
+        "name": "DeviceDetails7_s",
+        "type": "string"
+      },
+      {
+        "name": "DeviceDetails8_s",
+        "type": "string"
+      },
+      {
+        "name": "DeviceDetails9_s",
+        "type": "string"
+      },
+      {
+        "name": "DeviceDetails10_s",
+        "type": "string"
+      }
+    ],
+    "appColumns": [
+      {
+        "name": "TimeGenerated",
+        "type": "datetime"
+      },
+      {
+        "name": "ComputerName_s",
+        "type": "string"
+      },
+      {
+        "name": "ManagedDeviceID_g",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps1_s",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps2_s",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps3_s",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps4_s",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps5_s",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps6_s",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps7_s",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps8_s",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps9_s",
+        "type": "string"
+      },
+      {
+        "name": "InstalledApps10_s",
+        "type": "string"
+      }
+    ],
+    "driverColumns": [
+      {
+        "name": "TimeGenerated",
+        "type": "datetime"
+      },
+      {
+        "name": "ComputerName_s",
+        "type": "string"
+      },
+      {
+        "name": "ManagedDeviceID_g",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers1_s",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers2_s",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers3_s",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers4_s",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers5_s",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers6_s",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers7_s",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers8_s",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers9_s",
+        "type": "string"
+      },
+      {
+        "name": "ListedDrivers10_s",
+        "type": "string"
+      }
+    ],
+    "deviceTableSchema": {
+      "name": "[variables('deviceTableName')]",
+      "columns": "[variables('deviceColumns')]"
+    },
+    "appTableSchema": {
+      "name": "[variables('appTableName')]",
+      "columns": "[variables('appColumns')]"
+    },
+    "driverTableSchema": {
+      "name": "[variables('driverTableName')]",
+      "columns": "[variables('driverColumns')]"
+    },
+    "workspaceResourceId": "[if(equals(parameters('workspaceMode'), 'CreateNew'), resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.OperationalInsights/workspaces', parameters('existingWorkspaceName')))]",
+    "workspaceNameEffective": "[if(equals(parameters('workspaceMode'), 'CreateNew'), parameters('newWorkspaceName'), parameters('existingWorkspaceName'))]",
     "monitoringMetricsPublisherRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '3913510d-42f4-4e42-8a64-420c390055eb')]"
   },
   "resources": [
@@ -100,430 +285,36 @@
       }
     },
     {
-      "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
       "type": "Microsoft.OperationalInsights/workspaces/tables",
       "apiVersion": "2022-10-01",
       "name": "[format('{0}/{1}', variables('workspaceNameEffective'), variables('deviceTableName'))]",
       "properties": {
         "plan": "Analytics",
-        "schema": {
-          "name": "[variables('deviceTableName')]",
-          "columns": [
-            {
-              "name": "TimeGenerated",
-              "type": "datetime"
-            },
-            {
-              "name": "ComputerName_s",
-              "type": "string"
-            },
-            {
-              "name": "ManagedDeviceID_g",
-              "type": "string"
-            },
-            {
-              "name": "Microsoft365_b",
-              "type": "boolean"
-            },
-            {
-              "name": "Warranty_b",
-              "type": "boolean"
-            },
-            {
-              "name": "DeviceDetails1_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails2_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails3_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails4_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails5_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails6_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails7_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails8_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails9_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails10_s",
-              "type": "string"
-            }
-          ]
-        }
+        "schema": "[variables('deviceTableSchema')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
       ]
     },
     {
-      "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
       "type": "Microsoft.OperationalInsights/workspaces/tables",
       "apiVersion": "2022-10-01",
       "name": "[format('{0}/{1}', variables('workspaceNameEffective'), variables('appTableName'))]",
       "properties": {
         "plan": "Analytics",
-        "schema": {
-          "name": "[variables('appTableName')]",
-          "columns": [
-            {
-              "name": "TimeGenerated",
-              "type": "datetime"
-            },
-            {
-              "name": "ComputerName_s",
-              "type": "string"
-            },
-            {
-              "name": "ManagedDeviceID_g",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps1_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps2_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps3_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps4_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps5_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps6_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps7_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps8_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps9_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps10_s",
-              "type": "string"
-            }
-          ]
-        }
+        "schema": "[variables('appTableSchema')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
       ]
     },
     {
-      "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
       "type": "Microsoft.OperationalInsights/workspaces/tables",
       "apiVersion": "2022-10-01",
       "name": "[format('{0}/{1}', variables('workspaceNameEffective'), variables('driverTableName'))]",
       "properties": {
         "plan": "Analytics",
-        "schema": {
-          "name": "[variables('driverTableName')]",
-          "columns": [
-            {
-              "name": "TimeGenerated",
-              "type": "datetime"
-            },
-            {
-              "name": "ComputerName_s",
-              "type": "string"
-            },
-            {
-              "name": "ManagedDeviceID_g",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers1_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers2_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers3_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers4_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers5_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers6_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers7_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers8_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers9_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers10_s",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
-      ]
-    },
-    {
-      "condition": "[equals(parameters('workspaceMode'), 'UseExisting')]",
-      "type": "Microsoft.OperationalInsights/workspaces/tables",
-      "apiVersion": "2022-10-01",
-      "name": "[format('{0}/{1}', variables('workspaceNameEffective'), variables('deviceTableName'))]",
-      "properties": {
-        "plan": "Analytics",
-        "schema": {
-          "name": "[variables('deviceTableName')]",
-          "columns": [
-            {
-              "name": "TimeGenerated",
-              "type": "datetime"
-            },
-            {
-              "name": "ComputerName_s",
-              "type": "string"
-            },
-            {
-              "name": "ManagedDeviceID_g",
-              "type": "string"
-            },
-            {
-              "name": "Microsoft365_b",
-              "type": "boolean"
-            },
-            {
-              "name": "Warranty_b",
-              "type": "boolean"
-            },
-            {
-              "name": "DeviceDetails1_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails2_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails3_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails4_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails5_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails6_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails7_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails8_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails9_s",
-              "type": "string"
-            },
-            {
-              "name": "DeviceDetails10_s",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
-      ]
-    },
-    {
-      "condition": "[equals(parameters('workspaceMode'), 'UseExisting')]",
-      "type": "Microsoft.OperationalInsights/workspaces/tables",
-      "apiVersion": "2022-10-01",
-      "name": "[format('{0}/{1}', variables('workspaceNameEffective'), variables('appTableName'))]",
-      "properties": {
-        "plan": "Analytics",
-        "schema": {
-          "name": "[variables('appTableName')]",
-          "columns": [
-            {
-              "name": "TimeGenerated",
-              "type": "datetime"
-            },
-            {
-              "name": "ComputerName_s",
-              "type": "string"
-            },
-            {
-              "name": "ManagedDeviceID_g",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps1_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps2_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps3_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps4_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps5_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps6_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps7_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps8_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps9_s",
-              "type": "string"
-            },
-            {
-              "name": "InstalledApps10_s",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
-      ]
-    },
-    {
-      "condition": "[equals(parameters('workspaceMode'), 'UseExisting')]",
-      "type": "Microsoft.OperationalInsights/workspaces/tables",
-      "apiVersion": "2022-10-01",
-      "name": "[format('{0}/{1}', variables('workspaceNameEffective'), variables('driverTableName'))]",
-      "properties": {
-        "plan": "Analytics",
-        "schema": {
-          "name": "[variables('driverTableName')]",
-          "columns": [
-            {
-              "name": "TimeGenerated",
-              "type": "datetime"
-            },
-            {
-              "name": "ComputerName_s",
-              "type": "string"
-            },
-            {
-              "name": "ManagedDeviceID_g",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers1_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers2_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers3_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers4_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers5_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers6_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers7_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers8_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers9_s",
-              "type": "string"
-            },
-            {
-              "name": "ListedDrivers10_s",
-              "type": "string"
-            }
-          ]
-        }
+        "schema": "[variables('driverTableSchema')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
@@ -535,7 +326,7 @@
       "name": "[parameters('dceName')]",
       "location": "[parameters('location')]",
       "properties": {
-        "description": "DCE for PowerStacks inventory ingestion",
+        "description": "DCE for PowerStacks Enhanced Inventory ingestion",
         "networkAcls": {
           "publicNetworkAccess": "Enabled"
         }
@@ -559,180 +350,13 @@
         },
         "streamDeclarations": {
           "Custom-PowerStacksDeviceInventory": {
-            "columns": [
-              {
-                "name": "TimeGenerated",
-                "type": "datetime"
-              },
-              {
-                "name": "ComputerName_s",
-                "type": "string"
-              },
-              {
-                "name": "ManagedDeviceID_g",
-                "type": "string"
-              },
-              {
-                "name": "Microsoft365_b",
-                "type": "boolean"
-              },
-              {
-                "name": "Warranty_b",
-                "type": "boolean"
-              },
-              {
-                "name": "DeviceDetails1_s",
-                "type": "string"
-              },
-              {
-                "name": "DeviceDetails2_s",
-                "type": "string"
-              },
-              {
-                "name": "DeviceDetails3_s",
-                "type": "string"
-              },
-              {
-                "name": "DeviceDetails4_s",
-                "type": "string"
-              },
-              {
-                "name": "DeviceDetails5_s",
-                "type": "string"
-              },
-              {
-                "name": "DeviceDetails6_s",
-                "type": "string"
-              },
-              {
-                "name": "DeviceDetails7_s",
-                "type": "string"
-              },
-              {
-                "name": "DeviceDetails8_s",
-                "type": "string"
-              },
-              {
-                "name": "DeviceDetails9_s",
-                "type": "string"
-              },
-              {
-                "name": "DeviceDetails10_s",
-                "type": "string"
-              }
-            ]
+            "columns": "[variables('deviceColumns')]"
           },
           "Custom-PowerStacksAppInventory": {
-            "columns": [
-              {
-                "name": "TimeGenerated",
-                "type": "datetime"
-              },
-              {
-                "name": "ComputerName_s",
-                "type": "string"
-              },
-              {
-                "name": "ManagedDeviceID_g",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps1_s",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps2_s",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps3_s",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps4_s",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps5_s",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps6_s",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps7_s",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps8_s",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps9_s",
-                "type": "string"
-              },
-              {
-                "name": "InstalledApps10_s",
-                "type": "string"
-              }
-            ]
+            "columns": "[variables('appColumns')]"
           },
           "Custom-PowerStacksDriverInventory": {
-            "columns": [
-              {
-                "name": "TimeGenerated",
-                "type": "datetime"
-              },
-              {
-                "name": "ComputerName_s",
-                "type": "string"
-              },
-              {
-                "name": "ManagedDeviceID_g",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers1_s",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers2_s",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers3_s",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers4_s",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers5_s",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers6_s",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers7_s",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers8_s",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers9_s",
-                "type": "string"
-              },
-              {
-                "name": "ListedDrivers10_s",
-                "type": "string"
-              }
-            ]
+            "columns": "[variables('driverColumns')]"
           }
         },
         "dataFlows": [
@@ -743,7 +367,7 @@
             "destinations": [
               "la"
             ],
-            "outputStream": "Custom-PowerStacksDeviceInventory_CL"
+            "outputStream": "[variables('deviceTableName')]"
           },
           {
             "streams": [
@@ -752,7 +376,7 @@
             "destinations": [
               "la"
             ],
-            "outputStream": "Custom-PowerStacksAppInventory_CL"
+            "outputStream": "[variables('appTableName')]"
           },
           {
             "streams": [
@@ -761,7 +385,7 @@
             "destinations": [
               "la"
             ],
-            "outputStream": "Custom-PowerStacksDriverInventory_CL"
+            "outputStream": "[variables('driverTableName')]"
           }
         ]
       },
