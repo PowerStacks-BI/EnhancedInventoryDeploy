@@ -1,0 +1,69 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/uiDefinition.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "1.0.0",
+  "parameters": {
+    "basics": [
+      {
+        "name": "workspaceMode",
+        "type": "Microsoft.Common.DropDown",
+        "label": "Log Analytics workspace",
+        "defaultValue": "CreateNew",
+        "constraints": {
+          "allowedValues": [
+            { "label": "Create a new workspace", "value": "CreateNew" },
+            { "label": "Use an existing workspace (e.g., WUfB Reports)", "value": "UseExisting" }
+          ]
+        }
+      },
+      {
+        "name": "newWorkspaceName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "New workspace name",
+        "defaultValue": "law-PowerStacksEnhancedInventory",
+        "constraints": {
+          "required": true
+        },
+        "visible": "[equals(basics('workspaceMode'), 'CreateNew')]"
+      },
+      {
+        "name": "existingWorkspaceSubscriptionId",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Existing workspace subscription ID",
+        "defaultValue": "[subscription().subscriptionId]",
+        "constraints": { "required": true },
+        "visible": "[equals(basics('workspaceMode'), 'UseExisting')]"
+      },
+      {
+        "name": "existingWorkspaceResourceGroup",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Existing workspace resource group name",
+        "constraints": { "required": true },
+        "visible": "[equals(basics('workspaceMode'), 'UseExisting')]"
+      },
+      {
+        "name": "existingWorkspaceName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Existing workspace name",
+        "constraints": { "required": true },
+        "visible": "[equals(basics('workspaceMode'), 'UseExisting')]"
+      },
+      {
+        "name": "ingestionSpObjectId",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Optional: Ingestion app Service Principal Object ID (recommended)",
+        "toolTip": "If you leave this blank, deployment succeeds but you must assign DCR permissions afterward.",
+        "defaultValue": "",
+        "constraints": { "required": false }
+      }
+    ],
+    "outputs": {
+      "workspaceMode": "[basics('workspaceMode')]",
+      "newWorkspaceName": "[basics('newWorkspaceName')]",
+      "existingWorkspaceSubscriptionId": "[basics('existingWorkspaceSubscriptionId')]",
+      "existingWorkspaceResourceGroup": "[basics('existingWorkspaceResourceGroup')]",
+      "existingWorkspaceName": "[basics('existingWorkspaceName')]",
+      "ingestionSpObjectId": "[basics('ingestionSpObjectId')]"
+    }
+  }
+}
