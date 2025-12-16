@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "4405516574549439985"
+      "templateHash": "10483671306085439583"
     }
   },
   "parameters": {
@@ -273,6 +273,18 @@
       }
     },
     {
+      "type": "Microsoft.Insights/dataCollectionEndpoints",
+      "apiVersion": "2024-03-11",
+      "name": "[parameters('dceName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "description": "DCE for PowerStacks Enhanced Inventory ingestion",
+        "networkAcls": {
+          "publicNetworkAccess": "Enabled"
+        }
+      }
+    },
+    {
       "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
       "type": "Microsoft.OperationalInsights/workspaces/tables",
       "apiVersion": "2022-10-01",
@@ -321,18 +333,7 @@
       ]
     },
     {
-      "type": "Microsoft.Insights/dataCollectionEndpoints",
-      "apiVersion": "2024-03-11",
-      "name": "[parameters('dceName')]",
-      "location": "[parameters('location')]",
-      "properties": {
-        "description": "DCE for PowerStacks Enhanced Inventory ingestion",
-        "networkAcls": {
-          "publicNetworkAccess": "Enabled"
-        }
-      }
-    },
-    {
+      "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
       "type": "Microsoft.Insights/dataCollectionRules",
       "apiVersion": "2024-03-11",
       "name": "[parameters('dcrName')]",
@@ -390,18 +391,15 @@
         ]
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.Resources/deployments', 'appTableExisting')]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('appTableName'))]",
         "[resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dceName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.Resources/deployments', 'deviceTableExisting')]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('deviceTableName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.Resources/deployments', 'driverTableExisting')]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('driverTableName'))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
       ]
     },
     {
-      "condition": "[not(empty(parameters('ingestionSpObjectId')))]",
+      "condition": "[and(equals(parameters('workspaceMode'), 'CreateNew'), not(empty(parameters('ingestionSpObjectId'))))]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
       "scope": "[format('Microsoft.Insights/dataCollectionRules/{0}', parameters('dcrName'))]",
@@ -419,7 +417,7 @@
       "condition": "[equals(parameters('workspaceMode'), 'UseExisting')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
-      "name": "deviceTableExisting",
+      "name": "existingWorkspaceTablesAndDcr",
       "subscriptionId": "[parameters('existingWorkspaceSubscriptionId')]",
       "resourceGroup": "[parameters('existingWorkspaceResourceGroup')]",
       "properties": {
@@ -431,163 +429,35 @@
           "workspaceName": {
             "value": "[parameters('existingWorkspaceName')]"
           },
-          "tableName": {
+          "dcrName": {
+            "value": "[parameters('dcrName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "dceResourceId": {
+            "value": "[resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dceName'))]"
+          },
+          "deviceTableName": {
             "value": "[variables('deviceTableName')]"
           },
-          "columns": {
-            "value": "[variables('deviceColumns')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "743889802014180013"
-            }
-          },
-          "parameters": {
-            "workspaceName": {
-              "type": "string",
-              "metadata": {
-                "description": "Name of the existing Log Analytics workspace in this resource group."
-              }
-            },
-            "tableName": {
-              "type": "string",
-              "metadata": {
-                "description": "Table name to create/update."
-              }
-            },
-            "columns": {
-              "type": "array",
-              "metadata": {
-                "description": "Column schema for the table."
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.OperationalInsights/workspaces/tables",
-              "apiVersion": "2022-10-01",
-              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('tableName'))]",
-              "properties": {
-                "plan": "Analytics",
-                "schema": {
-                  "name": "[parameters('tableName')]",
-                  "columns": "[parameters('columns')]"
-                }
-              }
-            }
-          ],
-          "outputs": {
-            "tableId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('tableName'))]"
-            }
-          }
-        }
-      }
-    },
-    {
-      "condition": "[equals(parameters('workspaceMode'), 'UseExisting')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "appTableExisting",
-      "subscriptionId": "[parameters('existingWorkspaceSubscriptionId')]",
-      "resourceGroup": "[parameters('existingWorkspaceResourceGroup')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "workspaceName": {
-            "value": "[parameters('existingWorkspaceName')]"
-          },
-          "tableName": {
+          "appTableName": {
             "value": "[variables('appTableName')]"
           },
-          "columns": {
-            "value": "[variables('appColumns')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "743889802014180013"
-            }
-          },
-          "parameters": {
-            "workspaceName": {
-              "type": "string",
-              "metadata": {
-                "description": "Name of the existing Log Analytics workspace in this resource group."
-              }
-            },
-            "tableName": {
-              "type": "string",
-              "metadata": {
-                "description": "Table name to create/update."
-              }
-            },
-            "columns": {
-              "type": "array",
-              "metadata": {
-                "description": "Column schema for the table."
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.OperationalInsights/workspaces/tables",
-              "apiVersion": "2022-10-01",
-              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('tableName'))]",
-              "properties": {
-                "plan": "Analytics",
-                "schema": {
-                  "name": "[parameters('tableName')]",
-                  "columns": "[parameters('columns')]"
-                }
-              }
-            }
-          ],
-          "outputs": {
-            "tableId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('tableName'))]"
-            }
-          }
-        }
-      }
-    },
-    {
-      "condition": "[equals(parameters('workspaceMode'), 'UseExisting')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "driverTableExisting",
-      "subscriptionId": "[parameters('existingWorkspaceSubscriptionId')]",
-      "resourceGroup": "[parameters('existingWorkspaceResourceGroup')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "workspaceName": {
-            "value": "[parameters('existingWorkspaceName')]"
-          },
-          "tableName": {
+          "driverTableName": {
             "value": "[variables('driverTableName')]"
           },
-          "columns": {
+          "deviceColumns": {
+            "value": "[variables('deviceColumns')]"
+          },
+          "appColumns": {
+            "value": "[variables('appColumns')]"
+          },
+          "driverColumns": {
             "value": "[variables('driverColumns')]"
+          },
+          "ingestionSpObjectId": {
+            "value": "[parameters('ingestionSpObjectId')]"
           }
         },
         "template": {
@@ -597,51 +467,178 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "743889802014180013"
+              "templateHash": "7985678652990178338"
             }
           },
           "parameters": {
             "workspaceName": {
-              "type": "string",
-              "metadata": {
-                "description": "Name of the existing Log Analytics workspace in this resource group."
-              }
+              "type": "string"
             },
-            "tableName": {
-              "type": "string",
-              "metadata": {
-                "description": "Table name to create/update."
-              }
+            "dcrName": {
+              "type": "string"
             },
-            "columns": {
-              "type": "array",
+            "location": {
+              "type": "string"
+            },
+            "dceResourceId": {
+              "type": "string"
+            },
+            "deviceTableName": {
+              "type": "string"
+            },
+            "appTableName": {
+              "type": "string"
+            },
+            "driverTableName": {
+              "type": "string"
+            },
+            "deviceColumns": {
+              "type": "array"
+            },
+            "appColumns": {
+              "type": "array"
+            },
+            "driverColumns": {
+              "type": "array"
+            },
+            "ingestionSpObjectId": {
+              "type": "string",
+              "defaultValue": "",
               "metadata": {
-                "description": "Column schema for the table."
+                "description": "Optional. OBJECT ID (not Client ID) of the service principal used for log ingestion. If provided, the module assigns DCR permissions automatically."
               }
             }
+          },
+          "variables": {
+            "monitoringMetricsPublisherRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '3913510d-42f4-4e42-8a64-420c390055eb')]"
           },
           "resources": [
             {
               "type": "Microsoft.OperationalInsights/workspaces/tables",
               "apiVersion": "2022-10-01",
-              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('tableName'))]",
+              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('deviceTableName'))]",
               "properties": {
                 "plan": "Analytics",
                 "schema": {
-                  "name": "[parameters('tableName')]",
-                  "columns": "[parameters('columns')]"
+                  "name": "[parameters('deviceTableName')]",
+                  "columns": "[parameters('deviceColumns')]"
                 }
               }
+            },
+            {
+              "type": "Microsoft.OperationalInsights/workspaces/tables",
+              "apiVersion": "2022-10-01",
+              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('appTableName'))]",
+              "properties": {
+                "plan": "Analytics",
+                "schema": {
+                  "name": "[parameters('appTableName')]",
+                  "columns": "[parameters('appColumns')]"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.OperationalInsights/workspaces/tables",
+              "apiVersion": "2022-10-01",
+              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('driverTableName'))]",
+              "properties": {
+                "plan": "Analytics",
+                "schema": {
+                  "name": "[parameters('driverTableName')]",
+                  "columns": "[parameters('driverColumns')]"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRules",
+              "apiVersion": "2024-03-11",
+              "name": "[parameters('dcrName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "description": "PowerStacks Enhanced Inventory ingestion via Log Ingestion API",
+                "dataCollectionEndpointId": "[parameters('dceResourceId')]",
+                "destinations": {
+                  "logAnalytics": [
+                    {
+                      "name": "la",
+                      "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+                    }
+                  ]
+                },
+                "streamDeclarations": {
+                  "Custom-PowerStacksDeviceInventory": {
+                    "columns": "[parameters('deviceColumns')]"
+                  },
+                  "Custom-PowerStacksAppInventory": {
+                    "columns": "[parameters('appColumns')]"
+                  },
+                  "Custom-PowerStacksDriverInventory": {
+                    "columns": "[parameters('driverColumns')]"
+                  }
+                },
+                "dataFlows": [
+                  {
+                    "streams": [
+                      "Custom-PowerStacksDeviceInventory"
+                    ],
+                    "destinations": [
+                      "la"
+                    ],
+                    "outputStream": "[format('Custom-{0}', parameters('deviceTableName'))]"
+                  },
+                  {
+                    "streams": [
+                      "Custom-PowerStacksAppInventory"
+                    ],
+                    "destinations": [
+                      "la"
+                    ],
+                    "outputStream": "[format('Custom-{0}', parameters('appTableName'))]"
+                  },
+                  {
+                    "streams": [
+                      "Custom-PowerStacksDriverInventory"
+                    ],
+                    "destinations": [
+                      "la"
+                    ],
+                    "outputStream": "[format('Custom-{0}', parameters('driverTableName'))]"
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('appTableName'))]",
+                "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('deviceTableName'))]",
+                "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('driverTableName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('ingestionSpObjectId')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Insights/dataCollectionRules/{0}', parameters('dcrName'))]",
+              "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), parameters('ingestionSpObjectId'), variables('monitoringMetricsPublisherRoleDefinitionId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('monitoringMetricsPublisherRoleDefinitionId')]",
+                "principalId": "[parameters('ingestionSpObjectId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))]"
+              ]
             }
           ],
           "outputs": {
-            "tableId": {
+            "DcrImmutableId": {
               "type": "string",
-              "value": "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('tableName'))]"
+              "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), '2024-03-11').immutableId]"
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dceName'))]"
+      ]
     }
   ],
   "outputs": {
@@ -651,7 +648,7 @@
     },
     "DcrImmutableId": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), '2024-03-11').immutableId]"
+      "value": "[if(equals(parameters('workspaceMode'), 'CreateNew'), if(equals(parameters('workspaceMode'), 'CreateNew'), reference(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), '2024-03-11').immutableId, ''), if(equals(parameters('workspaceMode'), 'UseExisting'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.Resources/deployments', 'existingWorkspaceTablesAndDcr'), '2025-04-01').outputs.DcrImmutableId.value, ''))]"
     },
     "WorkspaceResourceId": {
       "type": "string",

@@ -129,7 +129,6 @@ resource lawNew 'Microsoft.OperationalInsights/workspaces@2022-10-01' = if (work
   }
 }
 
-// Reference the existing workspace RG (cross-subscription/RG supported for *existing* resource references)
 resource existingRg 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (workspaceMode == 'UseExisting') {
   name: existingWorkspaceResourceGroup
   scope: subscription(existingWorkspaceSubscriptionId)
@@ -144,10 +143,24 @@ var workspaceResourceId    = workspaceMode == 'CreateNew' ? lawNew.id : lawExist
 var workspaceNameEffective = workspaceMode == 'CreateNew' ? lawNew.name : lawExisting.name
 
 // ==================================================
-// Tables
+// DCE (always created in the deployment RG)
 // ==================================================
 
-// ---------- CreateNew: create tables directly as children of the new workspace ----------
+resource dce 'Microsoft.Insights/dataCollectionEndpoints@2024-03-11' = {
+  name: dceName
+  location: location
+  properties: {
+    description: 'DCE for PowerStacks Enhanced Inventory ingestion'
+    networkAcls: {
+      publicNetworkAccess: 'Enabled'
+    }
+  }
+}
+
+// ==================================================
+// CreateNew path: Tables + DCR in the same RG
+// ==================================================
+
 resource deviceTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
   parent: lawNew
   name: deviceTableName
@@ -184,70 +197,14 @@ resource driverTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10
   }
 }
 
-// ---------- UseExisting: create tables via module scoped to the workspace's resource group ----------
-module deviceTableExisting 'modules/workspaceTables.bicep' = if (workspaceMode == 'UseExisting') {
-  name: 'deviceTableExisting'
-  scope: existingRg
-  params: {
-    workspaceName: existingWorkspaceName
-    tableName: deviceTableName
-    columns: deviceColumns
-  }
-}
-
-module appTableExisting 'modules/workspaceTables.bicep' = if (workspaceMode == 'UseExisting') {
-  name: 'appTableExisting'
-  scope: existingRg
-  params: {
-    workspaceName: existingWorkspaceName
-    tableName: appTableName
-    columns: appColumns
-  }
-}
-
-module driverTableExisting 'modules/workspaceTables.bicep' = if (workspaceMode == 'UseExisting') {
-  name: 'driverTableExisting'
-  scope: existingRg
-  params: {
-    workspaceName: existingWorkspaceName
-    tableName: driverTableName
-    columns: driverColumns
-  }
-}
-
-// ==================================================
-// DCE
-// ==================================================
-
-resource dce 'Microsoft.Insights/dataCollectionEndpoints@2024-03-11' = {
-  name: dceName
-  location: location
-  properties: {
-    description: 'DCE for PowerStacks Enhanced Inventory ingestion'
-    networkAcls: {
-      publicNetworkAccess: 'Enabled'
-    }
-  }
-}
-
-// ==================================================
-// DCR
-// ==================================================
-
-resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
+resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (workspaceMode == 'CreateNew') {
   name: dcrName
   location: location
-
-  // Ensure tables exist before DCR validation runs
   dependsOn: [
     deviceTableNew
     appTableNew
     driverTableNew
-    deviceTableExisting
-    appTableExisting
-    driverTableExisting
   ]
-
   properties: {
     description: 'PowerStacks Enhanced Inventory ingestion via Log Ingestion API'
     dataCollectionEndpointId: dce.id
@@ -262,15 +219,9 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
     }
 
     streamDeclarations: {
-      'Custom-PowerStacksDeviceInventory': {
-        columns: deviceColumns
-      }
-      'Custom-PowerStacksAppInventory': {
-        columns: appColumns
-      }
-      'Custom-PowerStacksDriverInventory': {
-        columns: driverColumns
-      }
+      'Custom-PowerStacksDeviceInventory': { columns: deviceColumns }
+      'Custom-PowerStacksAppInventory':    { columns: appColumns }
+      'Custom-PowerStacksDriverInventory': { columns: driverColumns }
     }
 
     dataFlows: [
@@ -293,18 +244,15 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   }
 }
 
-// ==================================================
-// Optional RBAC on the DCR
-// ==================================================
-
+// Optional RBAC for CreateNew DCR
 var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   '3913510d-42f4-4e42-8a64-420c390055eb'
 )
 
-resource dcrRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(ingestionSpObjectId)) {
-  name: guid(dcr.id, ingestionSpObjectId, monitoringMetricsPublisherRoleDefinitionId)
-  scope: dcr
+resource dcrRoleNew 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (workspaceMode == 'CreateNew' && !empty(ingestionSpObjectId)) {
+  name: guid(dcrNew.id, ingestionSpObjectId, monitoringMetricsPublisherRoleDefinitionId)
+  scope: dcrNew
   properties: {
     roleDefinitionId: monitoringMetricsPublisherRoleDefinitionId
     principalId: ingestionSpObjectId
@@ -313,11 +261,46 @@ resource dcrRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!emp
 }
 
 // ==================================================
+// UseExisting path: Tables + DCR created in the workspace RG via module
+// ==================================================
+
+module existingWorkspaceTablesAndDcr 'modules/workspaceTablesAndDcr.bicep' = if (workspaceMode == 'UseExisting') {
+  name: 'existingWorkspaceTablesAndDcr'
+  scope: existingRg
+  params: {
+    workspaceName: existingWorkspaceName
+
+    dcrName: dcrName
+    location: location
+    dceResourceId: dce.id
+
+    deviceTableName: deviceTableName
+    appTableName: appTableName
+    driverTableName: driverTableName
+
+    deviceColumns: deviceColumns
+    appColumns: appColumns
+    driverColumns: driverColumns
+
+    ingestionSpObjectId: ingestionSpObjectId
+  }
+}
+
+// ==================================================
 // Outputs
 // ==================================================
 
+var dcrImmutableIdNew = workspaceMode == 'CreateNew' ? dcrNew!.properties.immutableId : ''
+var dcrImmutableIdExisting = workspaceMode == 'UseExisting' ? existingWorkspaceTablesAndDcr!.outputs.DcrImmutableId : ''
+
+
 output DceURI string = dce.properties.logsIngestion.endpoint
-output DcrImmutableId string = dcr.properties.immutableId
+
+output DcrImmutableId string = workspaceMode == 'CreateNew'
+  ? dcrImmutableIdNew
+  : dcrImmutableIdExisting
+
 output WorkspaceResourceId string = workspaceResourceId
 output WorkspaceName string = workspaceNameEffective
+
 output RoleAssignmentSkipped bool = empty(ingestionSpObjectId)
