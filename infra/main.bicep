@@ -232,23 +232,23 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
       }
     }
 
-    dataFlows: [
-      {
-        streams: [ 'Custom-PowerStacksDeviceInventory' ]
-        destinations: [ 'la' ]
-        outputStream: deviceTableName
-      }
-      {
-        streams: [ 'Custom-PowerStacksAppInventory' ]
-        destinations: [ 'la' ]
-        outputStream: appTableName
-      }
-      {
-        streams: [ 'Custom-PowerStacksDriverInventory' ]
-        destinations: [ 'la' ]
-        outputStream: driverTableName
-      }
-    ]
+   dataFlows: [
+  {
+    streams: [ 'Custom-PowerStacksDeviceInventory' ]
+    destinations: [ 'la' ]
+    outputStream: 'Custom-${deviceTableName}'
+  }
+  {
+    streams: [ 'Custom-PowerStacksAppInventory' ]
+    destinations: [ 'la' ]
+    outputStream: 'Custom-${appTableName}'
+  }
+  {
+    streams: [ 'Custom-PowerStacksDriverInventory' ]
+    destinations: [ 'la' ]
+    outputStream: 'Custom-${driverTableName}'
+  }
+]
   }
 }
 

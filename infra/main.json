@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "3657735473763688492"
+      "templateHash": "4397071742475627535"
     }
   },
   "parameters": {
@@ -367,7 +367,7 @@
             "destinations": [
               "la"
             ],
-            "outputStream": "[variables('deviceTableName')]"
+            "outputStream": "[format('Custom-{0}', variables('deviceTableName'))]"
           },
           {
             "streams": [
@@ -376,7 +376,7 @@
             "destinations": [
               "la"
             ],
-            "outputStream": "[variables('appTableName')]"
+            "outputStream": "[format('Custom-{0}', variables('appTableName'))]"
           },
           {
             "streams": [
@@ -385,7 +385,7 @@
             "destinations": [
               "la"
             ],
-            "outputStream": "[variables('driverTableName')]"
+            "outputStream": "[format('Custom-{0}', variables('driverTableName'))]"
           }
         ]
       },
