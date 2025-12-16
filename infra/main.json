@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "4397071742475627535"
+      "templateHash": "4405516574549439985"
     }
   },
   "parameters": {
@@ -73,7 +73,7 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Optional. Object ID of the service principal used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment."
+        "description": "Optional. OBJECT ID (not Client ID) of the service principal used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment."
       }
     }
   },
@@ -251,18 +251,6 @@
         "type": "string"
       }
     ],
-    "deviceTableSchema": {
-      "name": "[variables('deviceTableName')]",
-      "columns": "[variables('deviceColumns')]"
-    },
-    "appTableSchema": {
-      "name": "[variables('appTableName')]",
-      "columns": "[variables('appColumns')]"
-    },
-    "driverTableSchema": {
-      "name": "[variables('driverTableName')]",
-      "columns": "[variables('driverColumns')]"
-    },
     "workspaceResourceId": "[if(equals(parameters('workspaceMode'), 'CreateNew'), resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.OperationalInsights/workspaces', parameters('existingWorkspaceName')))]",
     "workspaceNameEffective": "[if(equals(parameters('workspaceMode'), 'CreateNew'), parameters('newWorkspaceName'), parameters('existingWorkspaceName'))]",
     "monitoringMetricsPublisherRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '3913510d-42f4-4e42-8a64-420c390055eb')]"
@@ -285,36 +273,48 @@
       }
     },
     {
+      "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
       "type": "Microsoft.OperationalInsights/workspaces/tables",
       "apiVersion": "2022-10-01",
-      "name": "[format('{0}/{1}', variables('workspaceNameEffective'), variables('deviceTableName'))]",
+      "name": "[format('{0}/{1}', parameters('newWorkspaceName'), variables('deviceTableName'))]",
       "properties": {
         "plan": "Analytics",
-        "schema": "[variables('deviceTableSchema')]"
+        "schema": {
+          "name": "[variables('deviceTableName')]",
+          "columns": "[variables('deviceColumns')]"
+        }
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
       ]
     },
     {
+      "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
       "type": "Microsoft.OperationalInsights/workspaces/tables",
       "apiVersion": "2022-10-01",
-      "name": "[format('{0}/{1}', variables('workspaceNameEffective'), variables('appTableName'))]",
+      "name": "[format('{0}/{1}', parameters('newWorkspaceName'), variables('appTableName'))]",
       "properties": {
         "plan": "Analytics",
-        "schema": "[variables('appTableSchema')]"
+        "schema": {
+          "name": "[variables('appTableName')]",
+          "columns": "[variables('appColumns')]"
+        }
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
       ]
     },
     {
+      "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
       "type": "Microsoft.OperationalInsights/workspaces/tables",
       "apiVersion": "2022-10-01",
-      "name": "[format('{0}/{1}', variables('workspaceNameEffective'), variables('driverTableName'))]",
+      "name": "[format('{0}/{1}', parameters('newWorkspaceName'), variables('driverTableName'))]",
       "properties": {
         "plan": "Analytics",
-        "schema": "[variables('driverTableSchema')]"
+        "schema": {
+          "name": "[variables('driverTableName')]",
+          "columns": "[variables('driverColumns')]"
+        }
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
@@ -390,7 +390,13 @@
         ]
       },
       "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.Resources/deployments', 'appTableExisting')]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('appTableName'))]",
         "[resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dceName'))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.Resources/deployments', 'deviceTableExisting')]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('deviceTableName'))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.Resources/deployments', 'driverTableExisting')]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('driverTableName'))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
       ]
     },
@@ -408,6 +414,234 @@
       "dependsOn": [
         "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))]"
       ]
+    },
+    {
+      "condition": "[equals(parameters('workspaceMode'), 'UseExisting')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "deviceTableExisting",
+      "subscriptionId": "[parameters('existingWorkspaceSubscriptionId')]",
+      "resourceGroup": "[parameters('existingWorkspaceResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "workspaceName": {
+            "value": "[parameters('existingWorkspaceName')]"
+          },
+          "tableName": {
+            "value": "[variables('deviceTableName')]"
+          },
+          "columns": {
+            "value": "[variables('deviceColumns')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "743889802014180013"
+            }
+          },
+          "parameters": {
+            "workspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the existing Log Analytics workspace in this resource group."
+              }
+            },
+            "tableName": {
+              "type": "string",
+              "metadata": {
+                "description": "Table name to create/update."
+              }
+            },
+            "columns": {
+              "type": "array",
+              "metadata": {
+                "description": "Column schema for the table."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces/tables",
+              "apiVersion": "2022-10-01",
+              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('tableName'))]",
+              "properties": {
+                "plan": "Analytics",
+                "schema": {
+                  "name": "[parameters('tableName')]",
+                  "columns": "[parameters('columns')]"
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "tableId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('tableName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[equals(parameters('workspaceMode'), 'UseExisting')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "appTableExisting",
+      "subscriptionId": "[parameters('existingWorkspaceSubscriptionId')]",
+      "resourceGroup": "[parameters('existingWorkspaceResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "workspaceName": {
+            "value": "[parameters('existingWorkspaceName')]"
+          },
+          "tableName": {
+            "value": "[variables('appTableName')]"
+          },
+          "columns": {
+            "value": "[variables('appColumns')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "743889802014180013"
+            }
+          },
+          "parameters": {
+            "workspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the existing Log Analytics workspace in this resource group."
+              }
+            },
+            "tableName": {
+              "type": "string",
+              "metadata": {
+                "description": "Table name to create/update."
+              }
+            },
+            "columns": {
+              "type": "array",
+              "metadata": {
+                "description": "Column schema for the table."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces/tables",
+              "apiVersion": "2022-10-01",
+              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('tableName'))]",
+              "properties": {
+                "plan": "Analytics",
+                "schema": {
+                  "name": "[parameters('tableName')]",
+                  "columns": "[parameters('columns')]"
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "tableId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('tableName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[equals(parameters('workspaceMode'), 'UseExisting')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "driverTableExisting",
+      "subscriptionId": "[parameters('existingWorkspaceSubscriptionId')]",
+      "resourceGroup": "[parameters('existingWorkspaceResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "workspaceName": {
+            "value": "[parameters('existingWorkspaceName')]"
+          },
+          "tableName": {
+            "value": "[variables('driverTableName')]"
+          },
+          "columns": {
+            "value": "[variables('driverColumns')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "743889802014180013"
+            }
+          },
+          "parameters": {
+            "workspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the existing Log Analytics workspace in this resource group."
+              }
+            },
+            "tableName": {
+              "type": "string",
+              "metadata": {
+                "description": "Table name to create/update."
+              }
+            },
+            "columns": {
+              "type": "array",
+              "metadata": {
+                "description": "Column schema for the table."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces/tables",
+              "apiVersion": "2022-10-01",
+              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('tableName'))]",
+              "properties": {
+                "plan": "Analytics",
+                "schema": {
+                  "name": "[parameters('tableName')]",
+                  "columns": "[parameters('columns')]"
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "tableId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('tableName'))]"
+            }
+          }
+        }
+      }
     }
   ],
   "outputs": {

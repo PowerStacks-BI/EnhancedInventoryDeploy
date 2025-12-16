@@ -48,11 +48,11 @@ param dcrName string = 'dcr-PowerStacksInventory'
 // Optional RBAC
 // ---------------------------
 
-@description('Optional. Object ID of the service principal used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment.')
+@description('Optional. OBJECT ID (not Client ID) of the service principal used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment.')
 param ingestionSpObjectId string = ''
 
 // ==================================================
-// Names
+// Table names
 // ==================================================
 
 var deviceTableName = 'PowerStacksDeviceInventory_CL'
@@ -60,7 +60,7 @@ var appTableName    = 'PowerStacksAppInventory_CL'
 var driverTableName = 'PowerStacksDriverInventory_CL'
 
 // ==================================================
-// Schemas (define once, reuse everywhere)
+// Schemas (columns defined once, reused)
 // ==================================================
 
 var deviceColumns = [
@@ -113,21 +113,6 @@ var driverColumns = [
   { name: 'ListedDrivers10_s', type: 'string' }
 ]
 
-var deviceTableSchema = {
-  name: deviceTableName
-  columns: deviceColumns
-}
-
-var appTableSchema = {
-  name: appTableName
-  columns: appColumns
-}
-
-var driverTableSchema = {
-  name: driverTableName
-  columns: driverColumns
-}
-
 // ==================================================
 // Workspace (new or existing)
 // ==================================================
@@ -144,6 +129,7 @@ resource lawNew 'Microsoft.OperationalInsights/workspaces@2022-10-01' = if (work
   }
 }
 
+// Reference the existing workspace RG (cross-subscription/RG supported for *existing* resource references)
 resource existingRg 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (workspaceMode == 'UseExisting') {
   name: existingWorkspaceResourceGroup
   scope: subscription(existingWorkspaceSubscriptionId)
@@ -158,30 +144,74 @@ var workspaceResourceId    = workspaceMode == 'CreateNew' ? lawNew.id : lawExist
 var workspaceNameEffective = workspaceMode == 'CreateNew' ? lawNew.name : lawExisting.name
 
 // ==================================================
-// Tables (create/update under selected workspace)
+// Tables
 // ==================================================
 
-resource deviceTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
-  name: '${workspaceNameEffective}/${deviceTableName}'
+// ---------- CreateNew: create tables directly as children of the new workspace ----------
+resource deviceTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
+  parent: lawNew
+  name: deviceTableName
   properties: {
     plan: 'Analytics'
-    schema: deviceTableSchema
+    schema: {
+      name: deviceTableName
+      columns: deviceColumns
+    }
   }
 }
 
-resource appTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
-  name: '${workspaceNameEffective}/${appTableName}'
+resource appTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
+  parent: lawNew
+  name: appTableName
   properties: {
     plan: 'Analytics'
-    schema: appTableSchema
+    schema: {
+      name: appTableName
+      columns: appColumns
+    }
   }
 }
 
-resource driverTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
-  name: '${workspaceNameEffective}/${driverTableName}'
+resource driverTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
+  parent: lawNew
+  name: driverTableName
   properties: {
     plan: 'Analytics'
-    schema: driverTableSchema
+    schema: {
+      name: driverTableName
+      columns: driverColumns
+    }
+  }
+}
+
+// ---------- UseExisting: create tables via module scoped to the workspace's resource group ----------
+module deviceTableExisting 'modules/workspaceTables.bicep' = if (workspaceMode == 'UseExisting') {
+  name: 'deviceTableExisting'
+  scope: existingRg
+  params: {
+    workspaceName: existingWorkspaceName
+    tableName: deviceTableName
+    columns: deviceColumns
+  }
+}
+
+module appTableExisting 'modules/workspaceTables.bicep' = if (workspaceMode == 'UseExisting') {
+  name: 'appTableExisting'
+  scope: existingRg
+  params: {
+    workspaceName: existingWorkspaceName
+    tableName: appTableName
+    columns: appColumns
+  }
+}
+
+module driverTableExisting 'modules/workspaceTables.bicep' = if (workspaceMode == 'UseExisting') {
+  name: 'driverTableExisting'
+  scope: existingRg
+  params: {
+    workspaceName: existingWorkspaceName
+    tableName: driverTableName
+    columns: driverColumns
   }
 }
 
@@ -207,6 +237,17 @@ resource dce 'Microsoft.Insights/dataCollectionEndpoints@2024-03-11' = {
 resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   name: dcrName
   location: location
+
+  // Ensure tables exist before DCR validation runs
+  dependsOn: [
+    deviceTableNew
+    appTableNew
+    driverTableNew
+    deviceTableExisting
+    appTableExisting
+    driverTableExisting
+  ]
+
   properties: {
     description: 'PowerStacks Enhanced Inventory ingestion via Log Ingestion API'
     dataCollectionEndpointId: dce.id
@@ -232,23 +273,23 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
       }
     }
 
-   dataFlows: [
-  {
-    streams: [ 'Custom-PowerStacksDeviceInventory' ]
-    destinations: [ 'la' ]
-    outputStream: 'Custom-${deviceTableName}'
-  }
-  {
-    streams: [ 'Custom-PowerStacksAppInventory' ]
-    destinations: [ 'la' ]
-    outputStream: 'Custom-${appTableName}'
-  }
-  {
-    streams: [ 'Custom-PowerStacksDriverInventory' ]
-    destinations: [ 'la' ]
-    outputStream: 'Custom-${driverTableName}'
-  }
-]
+    dataFlows: [
+      {
+        streams: [ 'Custom-PowerStacksDeviceInventory' ]
+        destinations: [ 'la' ]
+        outputStream: 'Custom-${deviceTableName}'
+      }
+      {
+        streams: [ 'Custom-PowerStacksAppInventory' ]
+        destinations: [ 'la' ]
+        outputStream: 'Custom-${appTableName}'
+      }
+      {
+        streams: [ 'Custom-PowerStacksDriverInventory' ]
+        destinations: [ 'la' ]
+        outputStream: 'Custom-${driverTableName}'
+      }
+    ]
   }
 }
 
@@ -256,9 +297,6 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
 // Optional RBAC on the DCR
 // ==================================================
 
-// NOTE: This is the role definition id used previously in your template.
-// If you decide to switch to the documented Microsoft.Insights/Telemetry/Write role id later,
-// change it here in one place.
 var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   '3913510d-42f4-4e42-8a64-420c390055eb'
