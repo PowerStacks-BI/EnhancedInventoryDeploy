@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "13102169987631380006"
+      "templateHash": "16059047007746968260"
     }
   },
   "parameters": {
@@ -69,11 +69,11 @@
         "description": "Name of the Data Collection Rule (DCR) to create."
       }
     },
-    "servicePrincipalObjectId": {
+    "enterpriseAppObjectId": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Optional. SERVICE PRINCIPAL OBJECT ID (not Application/Client ID) used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment."
+        "description": "Optional. Object ID of the Enterprise Application (service principal). NOT the Application (Client) ID. Used to assign Monitoring Metrics Publisher on the DCR."
       }
     }
   },
@@ -399,14 +399,14 @@
       ]
     },
     {
-      "condition": "[and(equals(parameters('workspaceMode'), 'CreateNew'), not(empty(parameters('servicePrincipalObjectId'))))]",
+      "condition": "[and(equals(parameters('workspaceMode'), 'CreateNew'), not(empty(parameters('enterpriseAppObjectId'))))]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
       "scope": "[format('Microsoft.Insights/dataCollectionRules/{0}', parameters('dcrName'))]",
-      "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), parameters('servicePrincipalObjectId'), variables('monitoringMetricsPublisherRoleDefinitionId'))]",
+      "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), parameters('enterpriseAppObjectId'), variables('monitoringMetricsPublisherRoleDefinitionId'))]",
       "properties": {
         "roleDefinitionId": "[variables('monitoringMetricsPublisherRoleDefinitionId')]",
-        "principalId": "[parameters('servicePrincipalObjectId')]",
+        "principalId": "[parameters('enterpriseAppObjectId')]",
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
@@ -456,8 +456,8 @@
           "driverColumns": {
             "value": "[variables('driverColumns')]"
           },
-          "servicePrincipalObjectId": {
-            "value": "[parameters('servicePrincipalObjectId')]"
+          "enterpriseAppObjectId": {
+            "value": "[parameters('enterpriseAppObjectId')]"
           }
         },
         "template": {
@@ -467,7 +467,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "6870987041944895876"
+              "templateHash": "6451908509623076976"
             }
           },
           "parameters": {
@@ -531,7 +531,7 @@
                 "description": "Schema columns for driver inventory stream/table."
               }
             },
-            "servicePrincipalObjectId": {
+            "enterpriseAppObjectId": {
               "type": "string",
               "defaultValue": "",
               "metadata": {
@@ -643,14 +643,14 @@
               ]
             },
             {
-              "condition": "[not(empty(parameters('servicePrincipalObjectId')))]",
+              "condition": "[not(empty(parameters('enterpriseAppObjectId')))]",
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.Insights/dataCollectionRules/{0}', parameters('dcrName'))]",
-              "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), parameters('servicePrincipalObjectId'), variables('monitoringMetricsPublisherRoleDefinitionId'))]",
+              "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), parameters('enterpriseAppObjectId'), variables('monitoringMetricsPublisherRoleDefinitionId'))]",
               "properties": {
                 "roleDefinitionId": "[variables('monitoringMetricsPublisherRoleDefinitionId')]",
-                "principalId": "[parameters('servicePrincipalObjectId')]",
+                "principalId": "[parameters('enterpriseAppObjectId')]",
                 "principalType": "ServicePrincipal"
               },
               "dependsOn": [
@@ -690,7 +690,7 @@
     },
     "RoleAssignmentSkipped": {
       "type": "bool",
-      "value": "[empty(parameters('servicePrincipalObjectId'))]"
+      "value": "[empty(parameters('enterpriseAppObjectId'))]"
     }
   }
 }

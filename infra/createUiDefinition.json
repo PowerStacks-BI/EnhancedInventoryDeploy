@@ -47,7 +47,7 @@
         "visible": "[equals(basics('workspaceMode'), 'UseExisting')]"
       },
       {
-        "name": "servicePrincipalObjectId",
+        "name": "enterpriseAppObjectId",
         "type": "Microsoft.Common.TextBox",
         "label": "Optional: Ingestion app Service Principal Object ID (recommended)",
         "toolTip": "If you leave this blank, deployment succeeds but you must assign DCR permissions afterward.",
@@ -61,7 +61,7 @@
       "existingWorkspaceSubscriptionId": "[basics('existingWorkspaceSubscriptionId')]",
       "existingWorkspaceResourceGroup": "[basics('existingWorkspaceResourceGroup')]",
       "existingWorkspaceName": "[basics('existingWorkspaceName')]",
-      "servicePrincipalObjectId": "[basics('servicePrincipalObjectId')]"
+      "enterpriseAppObjectId": "[basics('enterpriseAppObjectId')]"
     }
   }
 }

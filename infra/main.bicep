@@ -48,8 +48,8 @@ param dcrName string = 'dcr-PowerStacksInventory'
 // Optional RBAC
 // ---------------------------
 
-@description('Optional. SERVICE PRINCIPAL OBJECT ID (not Application/Client ID) used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment.')
-param servicePrincipalObjectId string = ''
+@description('Optional. Object ID of the Enterprise Application (service principal). NOT the Application (Client) ID. Used to assign Monitoring Metrics Publisher on the DCR.')
+param enterpriseAppObjectId string = ''
 
 // ==================================================
 // Table names
@@ -250,12 +250,12 @@ var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
   '3913510d-42f4-4e42-8a64-420c390055eb'
 )
 
-resource dcrRoleNew 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (workspaceMode == 'CreateNew' && !empty(servicePrincipalObjectId)) {
-  name: guid(dcrNew.id, servicePrincipalObjectId, monitoringMetricsPublisherRoleDefinitionId)
+resource dcrRoleNew 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (workspaceMode == 'CreateNew' && !empty(enterpriseAppObjectId)) {
+  name: guid(dcrNew.id, enterpriseAppObjectId, monitoringMetricsPublisherRoleDefinitionId)
   scope: dcrNew
   properties: {
     roleDefinitionId: monitoringMetricsPublisherRoleDefinitionId
-    principalId: servicePrincipalObjectId
+    principalId: enterpriseAppObjectId
     principalType: 'ServicePrincipal'
   }
 }
@@ -282,7 +282,7 @@ module existingWorkspaceTablesAndDcr 'modules/workspaceTablesAndDcr.bicep' = if 
     appColumns: appColumns
     driverColumns: driverColumns
 
-    servicePrincipalObjectId: servicePrincipalObjectId
+    enterpriseAppObjectId: enterpriseAppObjectId
   }
 }
 
@@ -302,4 +302,4 @@ output DcrImmutableId string = workspaceMode == 'CreateNew'
 output WorkspaceResourceId string = workspaceResourceId
 output WorkspaceName string = workspaceNameEffective
 
-output RoleAssignmentSkipped bool = empty(servicePrincipalObjectId)
+output RoleAssignmentSkipped bool = empty(enterpriseAppObjectId)

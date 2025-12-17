@@ -31,7 +31,7 @@ param appColumns array
 param driverColumns array
 
 @description('Optional. SERVICE PRINCIPAL OBJECT ID (not Application/Client ID) used for log ingestion. If provided, the deployment assigns DCR permissions automatically.')
-param servicePrincipalObjectId string = ''
+param enterpriseAppObjectId string = ''
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: workspaceName
@@ -125,12 +125,12 @@ var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
   '3913510d-42f4-4e42-8a64-420c390055eb'
 )
 
-resource dcrRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(servicePrincipalObjectId)) {
-  name: guid(dcr.id, servicePrincipalObjectId, monitoringMetricsPublisherRoleDefinitionId)
+resource dcrRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(enterpriseAppObjectId)) {
+  name: guid(dcr.id, enterpriseAppObjectId, monitoringMetricsPublisherRoleDefinitionId)
   scope: dcr
   properties: {
     roleDefinitionId: monitoringMetricsPublisherRoleDefinitionId
-    principalId: servicePrincipalObjectId
+    principalId: enterpriseAppObjectId
     principalType: 'ServicePrincipal'
   }
 }
