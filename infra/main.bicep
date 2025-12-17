@@ -48,8 +48,8 @@ param dcrName string = 'dcr-PowerStacksInventory'
 // Optional RBAC
 // ---------------------------
 
-@description('Optional. OBJECT ID (not Client ID) of the service principal used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment.')
-param ingestionSpObjectId string = ''
+@description('Optional. SERVICE PRINCIPAL OBJECT ID (not Application/Client ID) used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment.')
+param servicePrincipalObjectId string = ''
 
 // ==================================================
 // Table names
@@ -250,12 +250,12 @@ var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
   '3913510d-42f4-4e42-8a64-420c390055eb'
 )
 
-resource dcrRoleNew 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (workspaceMode == 'CreateNew' && !empty(ingestionSpObjectId)) {
-  name: guid(dcrNew.id, ingestionSpObjectId, monitoringMetricsPublisherRoleDefinitionId)
+resource dcrRoleNew 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (workspaceMode == 'CreateNew' && !empty(servicePrincipalObjectId)) {
+  name: guid(dcrNew.id, servicePrincipalObjectId, monitoringMetricsPublisherRoleDefinitionId)
   scope: dcrNew
   properties: {
     roleDefinitionId: monitoringMetricsPublisherRoleDefinitionId
-    principalId: ingestionSpObjectId
+    principalId: servicePrincipalObjectId
     principalType: 'ServicePrincipal'
   }
 }
@@ -282,7 +282,7 @@ module existingWorkspaceTablesAndDcr 'modules/workspaceTablesAndDcr.bicep' = if 
     appColumns: appColumns
     driverColumns: driverColumns
 
-    ingestionSpObjectId: ingestionSpObjectId
+    servicePrincipalObjectId: servicePrincipalObjectId
   }
 }
 
@@ -293,7 +293,6 @@ module existingWorkspaceTablesAndDcr 'modules/workspaceTablesAndDcr.bicep' = if 
 var dcrImmutableIdNew = workspaceMode == 'CreateNew' ? dcrNew!.properties.immutableId : ''
 var dcrImmutableIdExisting = workspaceMode == 'UseExisting' ? existingWorkspaceTablesAndDcr!.outputs.DcrImmutableId : ''
 
-
 output DceURI string = dce.properties.logsIngestion.endpoint
 
 output DcrImmutableId string = workspaceMode == 'CreateNew'
@@ -303,4 +302,4 @@ output DcrImmutableId string = workspaceMode == 'CreateNew'
 output WorkspaceResourceId string = workspaceResourceId
 output WorkspaceName string = workspaceNameEffective
 
-output RoleAssignmentSkipped bool = empty(ingestionSpObjectId)
+output RoleAssignmentSkipped bool = empty(servicePrincipalObjectId)

@@ -12,7 +12,7 @@
         "constraints": {
           "allowedValues": [
             { "label": "Create a new workspace", "value": "CreateNew" },
-            { "label": "Use an existing workspace (e.g., WUfB Reports)", "value": "UseExisting" }
+            { "label": "Use an existing workspace (e.g. WUfB Reports)", "value": "UseExisting" }
           ]
         }
       },
@@ -21,9 +21,7 @@
         "type": "Microsoft.Common.TextBox",
         "label": "New workspace name",
         "defaultValue": "law-PowerStacksEnhancedInventory",
-        "constraints": {
-          "required": true
-        },
+        "constraints": { "required": true },
         "visible": "[equals(basics('workspaceMode'), 'CreateNew')]"
       },
       {
@@ -49,7 +47,7 @@
         "visible": "[equals(basics('workspaceMode'), 'UseExisting')]"
       },
       {
-        "name": "ingestionSpObjectId",
+        "name": "servicePrincipalObjectId",
         "type": "Microsoft.Common.TextBox",
         "label": "Optional: Ingestion app Service Principal Object ID (recommended)",
         "toolTip": "If you leave this blank, deployment succeeds but you must assign DCR permissions afterward.",
@@ -63,7 +61,7 @@
       "existingWorkspaceSubscriptionId": "[basics('existingWorkspaceSubscriptionId')]",
       "existingWorkspaceResourceGroup": "[basics('existingWorkspaceResourceGroup')]",
       "existingWorkspaceName": "[basics('existingWorkspaceName')]",
-      "ingestionSpObjectId": "[basics('ingestionSpObjectId')]"
+      "servicePrincipalObjectId": "[basics('servicePrincipalObjectId')]"
     }
   }
 }
