@@ -1,37 +1,21 @@
 targetScope = 'resourceGroup'
 
-@description('Name of the existing Log Analytics workspace (in this resource group).')
 param workspaceName string
-
-@description('Name of the Data Collection Rule (DCR) to create.')
 param dcrName string
-
-@description('Deployment location.')
 param location string
-
-@description('Resource ID of the Data Collection Endpoint (DCE).')
 param dceResourceId string
 
-@description('Custom table name for device inventory.')
 param deviceTableName string
-
-@description('Custom table name for app inventory.')
 param appTableName string
-
-@description('Custom table name for driver inventory.')
 param driverTableName string
 
-@description('Schema columns for device inventory stream/table.')
 param deviceColumns array
-
-@description('Schema columns for app inventory stream/table.')
 param appColumns array
-
-@description('Schema columns for driver inventory stream/table.')
 param driverColumns array
 
-@description('Optional. SERVICE PRINCIPAL OBJECT ID (not Application/Client ID) used for log ingestion. If provided, the deployment assigns DCR permissions automatically.')
-param enterpriseAppObjectId string = ''
+// NOTE:
+// RBAC for log ingestion is intentionally handled in post-deploy onboarding.
+// This avoids confusion between Application (client) ID vs service principal object ID.
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: workspaceName
@@ -120,20 +104,4 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   }
 }
 
-var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
-  'Microsoft.Authorization/roleDefinitions',
-  '3913510d-42f4-4e42-8a64-420c390055eb'
-)
-
-resource dcrRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(enterpriseAppObjectId)) {
-  name: guid(dcr.id, enterpriseAppObjectId, monitoringMetricsPublisherRoleDefinitionId)
-  scope: dcr
-  properties: {
-    roleDefinitionId: monitoringMetricsPublisherRoleDefinitionId
-    principalId: enterpriseAppObjectId
-    principalType: 'ServicePrincipal'
-  }
-}
-
 output DcrImmutableId string = dcr.properties.immutableId
-output DcrResourceId string = dcr.id
