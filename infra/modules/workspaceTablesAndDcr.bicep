@@ -136,3 +136,4 @@ resource dcrRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!emp
 }
 
 output DcrImmutableId string = dcr.properties.immutableId
+output DcrResourceId string = dcr.id

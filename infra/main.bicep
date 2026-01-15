@@ -4,114 +4,55 @@ targetScope = 'resourceGroup'
 // Parameters
 // ==================================================
 
-@description('Choose whether to create a new Log Analytics workspace or use an existing one.')
 @allowed([
   'CreateNew'
   'UseExisting'
 ])
+@description('Choose CreateNew to create a new workspace, or UseExisting to use an existing Log Analytics workspace.')
 param workspaceMode string = 'CreateNew'
 
-@description('Deployment location. This should not be changed and defaults to the resource group location.')
+@description('Azure region for resources created in this deployment resource group.')
 param location string = resourceGroup().location
 
-// ---------------------------
-// New workspace (CreateNew)
-// ---------------------------
-
-@description('Name of the new Log Analytics workspace. Only used when WorkspaceMode is set to CreateNew. Ignored when using an existing workspace.')
-param newWorkspaceName string = 'law-PowerStacksEnhancedInventory'
-
-// ---------------------------
-// Existing workspace (UseExisting)
-// ---------------------------
-
-@description('Subscription ID of the existing Log Analytics workspace. Required only when WorkspaceMode is set to UseExisting. Leave blank when creating a new workspace.')
-param existingWorkspaceSubscriptionId string = subscription().subscriptionId
-
-@description('Resource group name of the existing Log Analytics workspace. Required only when WorkspaceMode is set to UseExisting.')
-param existingWorkspaceResourceGroup string = ''
-
-@description('Name of the existing Log Analytics workspace. Required only when WorkspaceMode is set to UseExisting.')
-param existingWorkspaceName string = ''
-
-// ---------------------------
-// DCE / DCR
-// ---------------------------
-
-@description('Name of the Data Collection Endpoint (DCE) to create.')
+@description('Name for the Data Collection Endpoint (DCE).')
 param dceName string = 'dce-PowerStacksInventory'
 
-@description('Name of the Data Collection Rule (DCR) to create.')
+@description('Name for the Data Collection Rule (DCR).')
 param dcrName string = 'dcr-PowerStacksInventory'
 
-// ---------------------------
-// Optional RBAC
-// ---------------------------
+// New workspace settings
+@description('Name of the new Log Analytics workspace. Used only when WorkspaceMode is CreateNew.')
+param newWorkspaceName string = 'law-PowerStacksInventory'
 
-@description('Optional. Object ID of the Enterprise Application (service principal). NOT the Application (Client) ID. Used to assign Monitoring Metrics Publisher on the DCR.')
-param enterpriseAppObjectId string = ''
+// Existing workspace settings
+@description('Subscription ID of the existing Log Analytics workspace. Required only when WorkspaceMode is UseExisting.')
+param existingWorkspaceSubscriptionId string = subscription().subscriptionId
 
-// ==================================================
+@description('Resource group name of the existing Log Analytics workspace. Required only when WorkspaceMode is UseExisting.')
+param existingWorkspaceResourceGroup string = ''
+
+@description('Name of the existing Log Analytics workspace. Required only when WorkspaceMode is UseExisting.')
+param existingWorkspaceName string = ''
+
 // Table names
-// ==================================================
+@description('Custom table name for device inventory.')
+param deviceTableName string = 'PowerStacksDeviceInventory_CL'
 
-var deviceTableName = 'PowerStacksDeviceInventory_CL'
-var appTableName    = 'PowerStacksAppInventory_CL'
-var driverTableName = 'PowerStacksDriverInventory_CL'
+@description('Custom table name for app inventory.')
+param appTableName string = 'PowerStacksAppInventory_CL'
 
-// ==================================================
-// Schemas (columns defined once, reused)
-// ==================================================
+@description('Custom table name for driver inventory.')
+param driverTableName string = 'PowerStacksDriverInventory_CL'
 
-var deviceColumns = [
-  { name: 'TimeGenerated', type: 'datetime' }
-  { name: 'ComputerName_s', type: 'string' }
-  { name: 'ManagedDeviceID_g', type: 'string' }
-  { name: 'Microsoft365_b', type: 'boolean' }
-  { name: 'Warranty_b', type: 'boolean' }
-  { name: 'DeviceDetails1_s', type: 'string' }
-  { name: 'DeviceDetails2_s', type: 'string' }
-  { name: 'DeviceDetails3_s', type: 'string' }
-  { name: 'DeviceDetails4_s', type: 'string' }
-  { name: 'DeviceDetails5_s', type: 'string' }
-  { name: 'DeviceDetails6_s', type: 'string' }
-  { name: 'DeviceDetails7_s', type: 'string' }
-  { name: 'DeviceDetails8_s', type: 'string' }
-  { name: 'DeviceDetails9_s', type: 'string' }
-  { name: 'DeviceDetails10_s', type: 'string' }
-]
+// Column schemas
+@description('Column schema for the device inventory table.')
+param deviceColumns array
 
-var appColumns = [
-  { name: 'TimeGenerated', type: 'datetime' }
-  { name: 'ComputerName_s', type: 'string' }
-  { name: 'ManagedDeviceID_g', type: 'string' }
-  { name: 'InstalledApps1_s', type: 'string' }
-  { name: 'InstalledApps2_s', type: 'string' }
-  { name: 'InstalledApps3_s', type: 'string' }
-  { name: 'InstalledApps4_s', type: 'string' }
-  { name: 'InstalledApps5_s', type: 'string' }
-  { name: 'InstalledApps6_s', type: 'string' }
-  { name: 'InstalledApps7_s', type: 'string' }
-  { name: 'InstalledApps8_s', type: 'string' }
-  { name: 'InstalledApps9_s', type: 'string' }
-  { name: 'InstalledApps10_s', type: 'string' }
-]
+@description('Column schema for the app inventory table.')
+param appColumns array
 
-var driverColumns = [
-  { name: 'TimeGenerated', type: 'datetime' }
-  { name: 'ComputerName_s', type: 'string' }
-  { name: 'ManagedDeviceID_g', type: 'string' }
-  { name: 'ListedDrivers1_s', type: 'string' }
-  { name: 'ListedDrivers2_s', type: 'string' }
-  { name: 'ListedDrivers3_s', type: 'string' }
-  { name: 'ListedDrivers4_s', type: 'string' }
-  { name: 'ListedDrivers5_s', type: 'string' }
-  { name: 'ListedDrivers6_s', type: 'string' }
-  { name: 'ListedDrivers7_s', type: 'string' }
-  { name: 'ListedDrivers8_s', type: 'string' }
-  { name: 'ListedDrivers9_s', type: 'string' }
-  { name: 'ListedDrivers10_s', type: 'string' }
-]
+@description('Column schema for the driver inventory table.')
+param driverColumns array
 
 // ==================================================
 // Workspace (new or existing)
@@ -143,22 +84,9 @@ var workspaceResourceId    = workspaceMode == 'CreateNew' ? lawNew.id : lawExist
 var workspaceNameEffective = workspaceMode == 'CreateNew' ? lawNew.name : lawExisting.name
 
 // ==================================================
-// DCE (always created in the deployment RG)
-// ==================================================
-
-resource dce 'Microsoft.Insights/dataCollectionEndpoints@2024-03-11' = {
-  name: dceName
-  location: location
-  properties: {
-    description: 'DCE for PowerStacks Enhanced Inventory ingestion'
-    networkAcls: {
-      publicNetworkAccess: 'Enabled'
-    }
-  }
-}
-
-// ==================================================
-// CreateNew path: Tables + DCR in the same RG
+// Tables
+//   - CreateNew: create tables directly (same RG as the new workspace)
+//   - UseExisting: create tables via module scoped to the workspace RG
 // ==================================================
 
 resource deviceTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
@@ -197,14 +125,47 @@ resource driverTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10
   }
 }
 
-resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (workspaceMode == 'CreateNew') {
+module existingWorkspaceTables 'modules/workspaceTables.bicep' = if (workspaceMode == 'UseExisting') {
+  name: 'existingWorkspaceTables'
+  scope: existingRg
+  params: {
+    workspaceName: existingWorkspaceName
+    deviceTableName: deviceTableName
+    appTableName: appTableName
+    driverTableName: driverTableName
+    deviceColumns: deviceColumns
+    appColumns: appColumns
+    driverColumns: driverColumns
+  }
+}
+
+// ==================================================
+// DCE (always in deployment resource group)
+// ==================================================
+
+resource dce 'Microsoft.Insights/dataCollectionEndpoints@2024-03-11' = {
+  name: dceName
+  location: location
+  properties: {
+    description: 'PowerStacks Enhanced Inventory ingestion endpoint'
+  }
+}
+
+// ==================================================
+// DCR (always in deployment resource group)
+// ==================================================
+
+resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   name: dcrName
   location: location
-  dependsOn: [
-    deviceTableNew
-    appTableNew
-    driverTableNew
-  ]
+
+  dependsOn: concat(
+    [dce],
+    workspaceMode == 'CreateNew'
+      ? [deviceTableNew, appTableNew, driverTableNew]
+      : [existingWorkspaceTables]
+  )
+
   properties: {
     description: 'PowerStacks Enhanced Inventory ingestion via Log Ingestion API'
     dataCollectionEndpointId: dce.id
@@ -218,6 +179,8 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
       ]
     }
 
+    // Stream declarations are NOT table names.
+    // Output streams map to Custom-<TableName>, where <TableName> includes _CL.
     streamDeclarations: {
       'Custom-PowerStacksDeviceInventory': { columns: deviceColumns }
       'Custom-PowerStacksAppInventory':    { columns: appColumns }
@@ -244,62 +207,15 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
   }
 }
 
-// Optional RBAC for CreateNew DCR
-var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
-  'Microsoft.Authorization/roleDefinitions',
-  '3913510d-42f4-4e42-8a64-420c390055eb'
-)
-
-resource dcrRoleNew 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (workspaceMode == 'CreateNew' && !empty(enterpriseAppObjectId)) {
-  name: guid(dcrNew.id, enterpriseAppObjectId, monitoringMetricsPublisherRoleDefinitionId)
-  scope: dcrNew
-  properties: {
-    roleDefinitionId: monitoringMetricsPublisherRoleDefinitionId
-    principalId: enterpriseAppObjectId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// ==================================================
-// UseExisting path: Tables + DCR created in the workspace RG via module
-// ==================================================
-
-module existingWorkspaceTablesAndDcr 'modules/workspaceTablesAndDcr.bicep' = if (workspaceMode == 'UseExisting') {
-  name: 'existingWorkspaceTablesAndDcr'
-  scope: existingRg
-  params: {
-    workspaceName: existingWorkspaceName
-
-    dcrName: dcrName
-    location: location
-    dceResourceId: dce.id
-
-    deviceTableName: deviceTableName
-    appTableName: appTableName
-    driverTableName: driverTableName
-
-    deviceColumns: deviceColumns
-    appColumns: appColumns
-    driverColumns: driverColumns
-
-    enterpriseAppObjectId: enterpriseAppObjectId
-  }
-}
-
 // ==================================================
 // Outputs
 // ==================================================
 
-var dcrImmutableIdNew = workspaceMode == 'CreateNew' ? dcrNew!.properties.immutableId : ''
-var dcrImmutableIdExisting = workspaceMode == 'UseExisting' ? existingWorkspaceTablesAndDcr!.outputs.DcrImmutableId : ''
-
 output DceURI string = dce.properties.logsIngestion.endpoint
+output DceResourceId string = dce.id
 
-output DcrImmutableId string = workspaceMode == 'CreateNew'
-  ? dcrImmutableIdNew
-  : dcrImmutableIdExisting
+output DcrImmutableId string = dcr.properties.immutableId
+output DcrResourceId string = dcr.id
 
 output WorkspaceResourceId string = workspaceResourceId
 output WorkspaceName string = workspaceNameEffective
-
-output RoleAssignmentSkipped bool = empty(enterpriseAppObjectId)

@@ -25,17 +25,10 @@
         "visible": "[equals(basics('workspaceMode'), 'CreateNew')]"
       },
       {
-        "name": "existingWorkspaceSubscriptionId",
-        "type": "Microsoft.Common.TextBox",
-        "label": "Existing workspace subscription ID",
-        "defaultValue": "[subscription().subscriptionId]",
-        "constraints": { "required": true },
-        "visible": "[equals(basics('workspaceMode'), 'UseExisting')]"
-      },
-      {
         "name": "existingWorkspaceResourceGroup",
         "type": "Microsoft.Common.TextBox",
         "label": "Existing workspace resource group name",
+        "toolTip": "Resource group that contains the existing Log Analytics workspace.",
         "constraints": { "required": true },
         "visible": "[equals(basics('workspaceMode'), 'UseExisting')]"
       },
@@ -43,25 +36,17 @@
         "name": "existingWorkspaceName",
         "type": "Microsoft.Common.TextBox",
         "label": "Existing workspace name",
+        "toolTip": "Name of the existing Log Analytics workspace (for example, WUfB workspace name).",
         "constraints": { "required": true },
         "visible": "[equals(basics('workspaceMode'), 'UseExisting')]"
-      },
-      {
-        "name": "enterpriseAppObjectId",
-        "type": "Microsoft.Common.TextBox",
-        "label": "Optional: Ingestion app Service Principal Object ID (recommended)",
-        "toolTip": "If you leave this blank, deployment succeeds but you must assign DCR permissions afterward.",
-        "defaultValue": "",
-        "constraints": { "required": false }
       }
     ],
     "outputs": {
       "workspaceMode": "[basics('workspaceMode')]",
       "newWorkspaceName": "[basics('newWorkspaceName')]",
-      "existingWorkspaceSubscriptionId": "[basics('existingWorkspaceSubscriptionId')]",
+      "existingWorkspaceSubscriptionId": "[subscription().subscriptionId]",
       "existingWorkspaceResourceGroup": "[basics('existingWorkspaceResourceGroup')]",
-      "existingWorkspaceName": "[basics('existingWorkspaceName')]",
-      "enterpriseAppObjectId": "[basics('enterpriseAppObjectId')]"
+      "existingWorkspaceName": "[basics('existingWorkspaceName')]"
     }
   }
 }
