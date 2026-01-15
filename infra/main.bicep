@@ -34,25 +34,68 @@ param existingWorkspaceResourceGroup string = ''
 @description('Name of the existing Log Analytics workspace. Required only when WorkspaceMode is UseExisting.')
 param existingWorkspaceName string = ''
 
-// Table names
-@description('Custom table name for device inventory.')
-param deviceTableName string = 'PowerStacksDeviceInventory_CL'
+// ==================================================
+// Table Schemas
+// ==================================================
 
-@description('Custom table name for app inventory.')
-param appTableName string = 'PowerStacksAppInventory_CL'
+var deviceColumns = [
+  { name: 'TimeGenerated',     type: 'datetime' }
+  { name: 'ComputerName_s',    type: 'string' }
+  { name: 'ManagedDeviceID_g', type: 'string' }
+  { name: 'Microsoft365_b',    type: 'boolean' }
+  { name: 'Warranty_b',        type: 'boolean' }
+  { name: 'DeviceDetails1_s',  type: 'string' }
+  { name: 'DeviceDetails2_s',  type: 'string' }
+  { name: 'DeviceDetails3_s',  type: 'string' }
+  { name: 'DeviceDetails4_s',  type: 'string' }
+  { name: 'DeviceDetails5_s',  type: 'string' }
+  { name: 'DeviceDetails6_s',  type: 'string' }
+  { name: 'DeviceDetails7_s',  type: 'string' }
+  { name: 'DeviceDetails8_s',  type: 'string' }
+  { name: 'DeviceDetails9_s',  type: 'string' }
+  { name: 'DeviceDetails10_s', type: 'string' }
+]
 
-@description('Custom table name for driver inventory.')
-param driverTableName string = 'PowerStacksDriverInventory_CL'
+var appColumns = [
+  { name: 'TimeGenerated',     type: 'datetime' }
+  { name: 'ComputerName_s',    type: 'string' }
+  { name: 'ManagedDeviceID_g', type: 'string' }
+  { name: 'InstalledApps1_s',  type: 'string' }
+  { name: 'InstalledApps2_s',  type: 'string' }
+  { name: 'InstalledApps3_s',  type: 'string' }
+  { name: 'InstalledApps4_s',  type: 'string' }
+  { name: 'InstalledApps5_s',  type: 'string' }
+  { name: 'InstalledApps6_s',  type: 'string' }
+  { name: 'InstalledApps7_s',  type: 'string' }
+  { name: 'InstalledApps8_s',  type: 'string' }
+  { name: 'InstalledApps9_s',  type: 'string' }
+  { name: 'InstalledApps10_s', type: 'string' }
+]
 
-// Column schemas
-@description('Column schema for the device inventory table.')
-param deviceColumns array
+var driverColumns = [
+  { name: 'TimeGenerated',     type: 'datetime' }
+  { name: 'ComputerName_s',    type: 'string' }
+  { name: 'ManagedDeviceID_g', type: 'string' }
+  { name: 'ListedDrivers1_s',  type: 'string' }
+  { name: 'ListedDrivers2_s',  type: 'string' }
+  { name: 'ListedDrivers3_s',  type: 'string' }
+  { name: 'ListedDrivers4_s',  type: 'string' }
+  { name: 'ListedDrivers5_s',  type: 'string' }
+  { name: 'ListedDrivers6_s',  type: 'string' }
+  { name: 'ListedDrivers7_s',  type: 'string' }
+  { name: 'ListedDrivers8_s',  type: 'string' }
+  { name: 'ListedDrivers9_s',  type: 'string' }
+  { name: 'ListedDrivers10_s', type: 'string' }
+]
 
-@description('Column schema for the app inventory table.')
-param appColumns array
+// ==================================================
+// Table names (DO NOT CHANGE)
+// ==================================================
 
-@description('Column schema for the driver inventory table.')
-param driverColumns array
+var deviceTableName = 'PowerStacksDeviceInventory_CL'
+var appTableName    = 'PowerStacksAppInventory_CL'
+var driverTableName = 'PowerStacksDriverInventory_CL'
+
 
 // ==================================================
 // Workspace (new or existing)
