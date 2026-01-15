@@ -153,19 +153,18 @@ resource dce 'Microsoft.Insights/dataCollectionEndpoints@2024-03-11' = {
 
 // ==================================================
 // DCR (always in deployment resource group)
+//   - CreateNew: depends on new workspace tables
+//   - UseExisting: depends on existingWorkspaceTables module
 // ==================================================
 
-resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
+resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (workspaceMode == 'CreateNew') {
   name: dcrName
   location: location
-
-  dependsOn: concat(
-    [dce],
-    workspaceMode == 'CreateNew'
-      ? [deviceTableNew, appTableNew, driverTableNew]
-      : [existingWorkspaceTables]
-  )
-
+  dependsOn: [
+    deviceTableNew
+    appTableNew
+    driverTableNew
+  ]
   properties: {
     description: 'PowerStacks Enhanced Inventory ingestion via Log Ingestion API'
     dataCollectionEndpointId: dce.id
@@ -174,13 +173,11 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
       logAnalytics: [
         {
           name: 'la'
-          workspaceResourceId: workspaceResourceId
+          workspaceResourceId: lawNew.id
         }
       ]
     }
 
-    // Stream declarations are NOT table names.
-    // Output streams map to Custom-<TableName>, where <TableName> includes _CL.
     streamDeclarations: {
       'Custom-PowerStacksDeviceInventory': { columns: deviceColumns }
       'Custom-PowerStacksAppInventory':    { columns: appColumns }
@@ -207,6 +204,52 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   }
 }
 
+resource dcrExisting 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (workspaceMode == 'UseExisting') {
+  name: dcrName
+  location: location
+  dependsOn: [
+    existingWorkspaceTables
+  ]
+  properties: {
+    description: 'PowerStacks Enhanced Inventory ingestion via Log Ingestion API'
+    dataCollectionEndpointId: dce.id
+
+    destinations: {
+      logAnalytics: [
+        {
+          name: 'la'
+          workspaceResourceId: lawExisting.id
+        }
+      ]
+    }
+
+    streamDeclarations: {
+      'Custom-PowerStacksDeviceInventory': { columns: deviceColumns }
+      'Custom-PowerStacksAppInventory':    { columns: appColumns }
+      'Custom-PowerStacksDriverInventory': { columns: driverColumns }
+    }
+
+    dataFlows: [
+      {
+        streams: [ 'Custom-PowerStacksDeviceInventory' ]
+        destinations: [ 'la' ]
+        outputStream: 'Custom-${deviceTableName}'
+      }
+      {
+        streams: [ 'Custom-PowerStacksAppInventory' ]
+        destinations: [ 'la' ]
+        outputStream: 'Custom-${appTableName}'
+      }
+      {
+        streams: [ 'Custom-PowerStacksDriverInventory' ]
+        destinations: [ 'la' ]
+        outputStream: 'Custom-${driverTableName}'
+      }
+    ]
+  }
+}
+
+
 // ==================================================
 // Outputs
 // ==================================================
@@ -214,8 +257,12 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
 output DceURI string = dce.properties.logsIngestion.endpoint
 output DceResourceId string = dce.id
 
-output DcrImmutableId string = dcr.properties.immutableId
-output DcrResourceId string = dcr.id
+var dcrResourceId = workspaceMode == 'CreateNew' ? dcrNew!.id : dcrExisting!.id
+var dcrImmutableId = workspaceMode == 'CreateNew' ? dcrNew!.properties.immutableId : dcrExisting!.properties.immutableId
+
+output DcrResourceId string = dcrResourceId
+output DcrImmutableId string = dcrImmutableId
 
 output WorkspaceResourceId string = workspaceResourceId
 output WorkspaceName string = workspaceNameEffective
+
