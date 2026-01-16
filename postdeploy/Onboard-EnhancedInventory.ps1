@@ -73,6 +73,25 @@ function Get-LatestSuccessfulDeploymentName {
   return $deployments[0].DeploymentName
 }
 
+function Get-Flat {
+  param(
+    [Parameter(Mandatory)][hashtable] $Table,
+    [Parameter(Mandatory)][string]    $PrimaryKey,
+    [Parameter(Mandatory)][string]    $FallbackKey
+  )
+
+  if ($Table.ContainsKey($PrimaryKey) -and -not [string]::IsNullOrWhiteSpace([string]$Table[$PrimaryKey])) {
+    return $Table[$PrimaryKey]
+  }
+
+  if ($Table.ContainsKey($FallbackKey) -and -not [string]::IsNullOrWhiteSpace([string]$Table[$FallbackKey])) {
+    return $Table[$FallbackKey]
+  }
+
+  return $null
+}
+
+
 function Get-DeploymentOutputs {
   param(
     [Parameter(Mandatory)] [string] $RgName,
@@ -101,9 +120,6 @@ function Get-DeploymentOutputs {
   WindowsInventoryScriptUrl = Get-Flat -Table $flat -PrimaryKey 'WindowsInventoryScriptUrl' -FallbackKey 'windowsInventoryScriptUrl'
   MacInventoryScriptUrl     = Get-Flat -Table $flat -PrimaryKey 'MacInventoryScriptUrl'     -FallbackKey 'macInventoryScriptUrl'
 }
-
-
-
   # Safety checks
   if (-not $normalized.DceURI)         { throw "Missing output: DceURI (or dceURI)" }
   if (-not $normalized.DcrImmutableId) { throw "Missing output: DcrImmutableId (or dcrImmutableId)" }
@@ -222,23 +238,7 @@ function Show-ReadyToPasteConfig {
 }
 
 
-function Get-Flat {
-  param(
-    [Parameter(Mandatory)][hashtable] $Table,
-    [Parameter(Mandatory)][string]    $PrimaryKey,
-    [Parameter(Mandatory)][string]    $FallbackKey
-  )
 
-  if ($Table.ContainsKey($PrimaryKey) -and -not [string]::IsNullOrWhiteSpace([string]$Table[$PrimaryKey])) {
-    return $Table[$PrimaryKey]
-  }
-
-  if ($Table.ContainsKey($FallbackKey) -and -not [string]::IsNullOrWhiteSpace([string]$Table[$FallbackKey])) {
-    return $Table[$FallbackKey]
-  }
-
-  return $null
-}
 
 # ---------------------------
 # Main
@@ -292,17 +292,17 @@ Write-Host ""
 Write-Host "============================================================" -ForegroundColor White
 Write-Host "Enhanced Inventory - Values to paste into inventory scripts" -ForegroundColor White
 Write-Host "============================================================" -ForegroundColor White
-Write-Host ("TenantId:       {0}" -f (if ($TenantId)     { $TenantId }     else { "<Enter Tenant ID>" }))
-Write-Host ("ClientId:       {0}" -f (if ($ClientId)     { $ClientId }     else { "<Enter Client ID>" }))
-Write-Host ("ClientSecret:   {0}" -f (if ($ClientSecret) { $ClientSecret } else { "<Enter Client Secret>" }))
+Write-Host ("TenantId:       {0}" -f $(if ($TenantId)      { $TenantId }      else { "<Enter Tenant ID>" }))
+Write-Host ("ClientId:       {0}" -f $(if ($ClientId)      { $ClientId }      else { "<Enter Client ID>" }))
+Write-Host ("ClientSecret:   {0}" -f $(if ($ClientSecret)  { $ClientSecret }  else { "<Enter Client Secret>" }))
 Write-Host ("DceURI:         {0}" -f $outputs.DceURI)
 Write-Host ("DcrImmutableId: {0}" -f $outputs.DcrImmutableId)
 Write-Host "============================================================" -ForegroundColor White
 Write-Host ""
 Write-Host ""
 Write-Host "Inventory Scripts:" -ForegroundColor Cyan
-Write-Host " Windows: $($outputs.windowsInventoryScriptUrl)"
-Write-Host " macOS:   $($outputs.macInventoryScriptUrl)"
+Write-Host " Windows: $($outputs.WindowsInventoryScriptUrl)"
+Write-Host " macOS:   $($outputs.MacInventoryScriptUrl)"
 Write-Host ""
 Write-Ok "Done."
 
