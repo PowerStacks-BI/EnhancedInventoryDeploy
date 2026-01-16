@@ -215,8 +215,6 @@ function Show-ReadyToPasteConfig {
   Write-Host ""
 }
 
-
-
 # ---------------------------
 # Main
 # ---------------------------
@@ -265,14 +263,32 @@ if ($AssignRbac) {
 }
 
 # Normalize output casing (handles dceURI vs DceURI, etc.)
-$dceUri = $outputs.DceURI; if (-not $dceUri) { $dceUri = $outputs.dceURI }
-$dcrImmutableId = $outputs.DcrImmutableId; if (-not $dcrImmutableId) { $dcrImmutableId = $outputs.dcrImmutableId }
+$dceOutput = $outputs.PSObject.Properties |
+    Where-Object { $_.Name -ieq 'DceURI' } |
+    Select-Object -First 1
 
-$winUrl = $outputs.WindowsInventoryScriptUrl; if (-not $winUrl) { $winUrl = $outputs.windowsInventoryScriptUrl }
-$macUrl = $outputs.MacInventoryScriptUrl;     if (-not $macUrl) { $macUrl = $outputs.macInventoryScriptUrl }
+$dceUri = $dceOutput.Value.value
 
-$dceUri = $outputs.DceURI; if (-not $dceUri) { $dceUri = $outputs.dceURI }
-$dcrId  = $outputs.DcrImmutableId; if (-not $dcrId) { $dcrId = $outputs.dcrImmutableId }
+$dcrOutput = $outputs.PSObject.Properties |
+    Where-Object { $_.Name -ieq 'DcrImmutableId' } |
+    Select-Object -First 1
+
+$dcrImmutableId = $dcrOutput.Value.value
+$dcrId = $dcrImmutableId
+
+
+$winOutput = $outputs.PSObject.Properties |
+    Where-Object { $_.Name -ieq 'WindowsInventoryScriptUrl' } |
+    Select-Object -First 1
+
+$winUrl = $winOutput.Value.value
+
+$macOutput = $outputs.PSObject.Properties |
+    Where-Object { $_.Name -ieq 'MacInventoryScriptUrl' } |
+    Select-Object -First 1
+
+$macUrl = $macOutput.Value.value
+
 
 # Final output block
 Write-Host ""
