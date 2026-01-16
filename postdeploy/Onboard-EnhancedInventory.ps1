@@ -80,28 +80,32 @@ function Get-DeploymentOutputs {
   )
 
   $dep = Get-AzResourceGroupDeployment -ResourceGroupName $RgName -Name $DepName -ErrorAction Stop
-
   if (-not $dep -or -not $dep.Outputs) {
     throw "Deployment '$DepName' in RG '$RgName' has no outputs."
   }
 
-  # ARM outputs are commonly a Hashtable: @{ key = @{ type='String'; value='...' } }
-  # Normalize to a simple PSCustomObject with direct properties.
-  $flat = [ordered]@{}
-
-  if ($dep.Outputs -is [hashtable]) {
-    foreach ($k in $dep.Outputs.Keys) {
-      $flat[$k] = $dep.Outputs[$k].Value
-    }
-  } else {
-    # Sometimes Az returns a PSCustomObject with note properties
-    foreach ($p in $dep.Outputs.PSObject.Properties) {
-      $flat[$p.Name] = $p.Value.value
-    }
+  # Flatten outputs to simple key/value pairs
+  $flat = @{}
+  foreach ($k in $dep.Outputs.Keys) {
+    $flat[$k] = $dep.Outputs[$k].Value
   }
 
-  return [pscustomobject]$flat
+  # Normalize to the names the script expects (case + spelling)
+  $normalized = [ordered]@{
+    DceURI               = $flat['DceURI']               ?? $flat['dceURI']
+    DcrImmutableId       = $flat['DcrImmutableId']       ?? $flat['dcrImmutableId']
+    WorkspaceResourceId  = $flat['WorkspaceResourceId']  ?? $flat['workspaceResourceId']
+    WorkspaceName        = $flat['WorkspaceName']        ?? $flat['workspaceName']
+    RoleAssignmentSkipped= $flat['RoleAssignmentSkipped']?? $flat['roleAssignmentSkipped']
+  }
+
+  # Safety checks
+  if (-not $normalized.DceURI)         { throw "Missing output: DceURI (or dceURI)" }
+  if (-not $normalized.DcrImmutableId) { throw "Missing output: DcrImmutableId (or dcrImmutableId)" }
+
+  return [pscustomobject]$normalized
 }
+
 
 
 function Ensure-AzContext {
