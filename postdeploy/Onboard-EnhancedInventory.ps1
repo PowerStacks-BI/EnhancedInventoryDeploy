@@ -3,7 +3,7 @@
   Post-deploy onboarding for PowerStacks Enhanced Inventory (Log Ingestion API).
 
 .DESCRIPTION
-  This script runs AFTER the customer clicks "Deploy to Azure" from the EnhancedInventoryDeploy repo.
+  This script needs to be ran AFTER the "Deploy to Azure" from the EnhancedInventoryDeploy repo has run succesfully.
 
   It will:
     - Detect the latest successful deployment in the specified resource group (or use -DeploymentName)
@@ -81,26 +81,28 @@ function Get-DeploymentOutputs {
 
   $dep = Get-AzResourceGroupDeployment -ResourceGroupName $RgName -Name $DepName -ErrorAction Stop
 
-  if (-not $dep.Outputs) {
-    throw "Deployment '$DepName' has no outputs. Ensure you deployed using the EnhancedInventoryDeploy template."
+  if (-not $dep -or -not $dep.Outputs) {
+    throw "Deployment '$DepName' in RG '$RgName' has no outputs."
   }
 
-  # Expected outputs from infra/main.bicep
-  $outputs = [ordered]@{
-    DceURI            = $dep.Outputs.DceURI.value
-    DcrImmutableId    = $dep.Outputs.DcrImmutableId.value
-    WorkspaceName     = $dep.Outputs.WorkspaceName.value
-    WorkspaceResourceId = $dep.Outputs.WorkspaceResourceId.value
-  }
+  # ARM outputs are commonly a Hashtable: @{ key = @{ type='String'; value='...' } }
+  # Normalize to a simple PSCustomObject with direct properties.
+  $flat = [ordered]@{}
 
-  foreach ($k in $outputs.Keys) {
-    if ([string]::IsNullOrWhiteSpace([string]$outputs[$k])) {
-      throw "Deployment output '$k' was missing or empty. Deployment '$DepName' may not be the correct template."
+  if ($dep.Outputs -is [hashtable]) {
+    foreach ($k in $dep.Outputs.Keys) {
+      $flat[$k] = $dep.Outputs[$k].Value
+    }
+  } else {
+    # Sometimes Az returns a PSCustomObject with note properties
+    foreach ($p in $dep.Outputs.PSObject.Properties) {
+      $flat[$p.Name] = $p.Value.value
     }
   }
 
-  return $outputs
+  return [pscustomobject]$flat
 }
+
 
 function Ensure-AzContext {
   param(
