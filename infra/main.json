@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "8359733735540942413"
+      "templateHash": "7027549759643385229"
     }
   },
   "parameters": {
@@ -610,6 +610,14 @@
     "RoleAssignmentSkipped": {
       "type": "bool",
       "value": true
+    },
+    "WindowsInventoryScriptUrl": {
+      "type": "string",
+      "value": "https://github.com/PowerStacks-BI/Windows-Custom-Inventory/blob/main/Intune_Windows_Inventory.ps1"
+    },
+    "MacInventoryScriptUrl": {
+      "type": "string",
+      "value": "https://github.com/PowerStacks-BI/Mac-Custom-Inventory/blob/main/Mac_Custom_Inventory.sh"
     }
   }
 }

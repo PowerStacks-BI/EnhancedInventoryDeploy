@@ -292,3 +292,11 @@ output WorkspaceResourceId string = workspaceResourceId
 output WorkspaceName string = workspaceNameEffective
 
 output RoleAssignmentSkipped bool = true
+
+// ==================================================
+// Inventory Script References (static)
+// ==================================================
+
+output WindowsInventoryScriptUrl string = 'https://github.com/PowerStacks-BI/Windows-Custom-Inventory/blob/main/Intune_Windows_Inventory.ps1'
+
+output MacInventoryScriptUrl string = 'https://github.com/PowerStacks-BI/Mac-Custom-Inventory/blob/main/Mac_Custom_Inventory.sh'

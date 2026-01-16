@@ -171,6 +171,52 @@ function Set-DcrRoleAssignment {
   Write-Ok "RBAC assignment completed."
 }
 
+function Show-ReadyToPasteConfig {
+  param(
+    [Parameter(Mandatory)] [string] $TenantId,
+    [Parameter(Mandatory)] [string] $ClientId,
+    [Parameter(Mandatory)] [string] $ClientSecret,
+    [Parameter(Mandatory)] [string] $DceURI,
+    [Parameter(Mandatory)] [string] $DcrImmutableId
+  )
+
+  $block = @"
+# "LogIngestionAPI" (Latest) or "DataCollectorAPI" (Legacy)
+`$LogAPIMode = "LogIngestionAPI"
+
+########## Use for LogIngestionAPI #############
+
+# Replace with your Tenant ID in which the Data Collection Endpoint resides
+`$TenantId = "$TenantId"
+
+# Replace with your Client ID created and granted permissions
+`$ClientId = "$ClientId"
+
+# Replace with your Secret created for the above Client
+`$ClientSecret = "$ClientSecret"
+
+# Replace with your Data Collection Endpoint - Log Ingestion URL
+`$DceURI = "$DceURI"
+
+# Replace with your Data Collection Rule - Immutable ID
+`$DcrImmutableId = "$DcrImmutableId"
+
+#################################################
+"@
+
+  Write-Host ""
+  Write-Host "============================================================" -ForegroundColor Cyan
+  Write-Host "READY-TO-PASTE WINDOWS CONFIG" -ForegroundColor Cyan
+  Write-Host "============================================================" -ForegroundColor Cyan
+  Write-Host ""
+  Write-Host $block
+  Write-Host ""
+  Write-Host "NOTE: Treat ClientSecret like a password. Do not paste it into tickets, email, or chat." -ForegroundColor Yellow
+  Write-Host ""
+}
+
+
+
 # ---------------------------
 # Main
 # ---------------------------
@@ -218,6 +264,16 @@ if ($AssignRbac) {
   Write-Warn "RBAC assignment skipped. If ingestion fails, assign 'Monitoring Metrics Publisher' on the DCR manually."
 }
 
+# Normalize output casing (handles dceURI vs DceURI, etc.)
+$dceUri = $outputs.DceURI; if (-not $dceUri) { $dceUri = $outputs.dceURI }
+$dcrImmutableId = $outputs.DcrImmutableId; if (-not $dcrImmutableId) { $dcrImmutableId = $outputs.dcrImmutableId }
+
+$winUrl = $outputs.WindowsInventoryScriptUrl; if (-not $winUrl) { $winUrl = $outputs.windowsInventoryScriptUrl }
+$macUrl = $outputs.MacInventoryScriptUrl;     if (-not $macUrl) { $macUrl = $outputs.macInventoryScriptUrl }
+
+$dceUri = $outputs.DceURI; if (-not $dceUri) { $dceUri = $outputs.dceURI }
+$dcrId  = $outputs.DcrImmutableId; if (-not $dcrId) { $dcrId = $outputs.dcrImmutableId }
+
 # Final output block
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor White
@@ -230,4 +286,20 @@ Write-Host ("DceURI:         {0}" -f $outputs.DceURI)
 Write-Host ("DcrImmutableId: {0}" -f $outputs.DcrImmutableId)
 Write-Host "============================================================" -ForegroundColor White
 Write-Host ""
+Write-Host ""
+Write-Host "Inventory Scripts:" -ForegroundColor Cyan
+Write-Host " Windows: $($outputs.WindowsInventoryScriptUrl)"
+Write-Host " macOS:   $($outputs.MacInventoryScriptUrl)"
+Write-Host ""
 Write-Ok "Done."
+
+
+
+Show-ReadyToPasteConfig `
+  -TenantId $TenantId `
+  -ClientId $ClientId `
+  -ClientSecret $ClientSecret `
+  -DceURI $dceUri `
+  -DcrImmutableId $dcrId
+
+
