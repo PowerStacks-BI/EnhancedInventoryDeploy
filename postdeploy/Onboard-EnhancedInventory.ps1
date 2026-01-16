@@ -91,18 +91,24 @@ function Get-DeploymentOutputs {
   }
 
   # Normalize to the names the script expects (case + spelling)
-  $normalized = [ordered]@{
-    DceURI               = $flat['DceURI']               ?? $flat['dceURI']
-    DcrImmutableId       = $flat['DcrImmutableId']       ?? $flat['dcrImmutableId']
-    WorkspaceResourceId  = $flat['WorkspaceResourceId']  ?? $flat['workspaceResourceId']
-    WorkspaceName        = $flat['WorkspaceName']        ?? $flat['workspaceName']
-    RoleAssignmentSkipped= $flat['RoleAssignmentSkipped']?? $flat['roleAssignmentSkipped']
-  }
+ $normalized = [ordered]@{
+  DceURI                = Get-Flat -Table $flat -PrimaryKey 'DceURI'                -FallbackKey 'dceURI'
+  DcrImmutableId        = Get-Flat -Table $flat -PrimaryKey 'DcrImmutableId'        -FallbackKey 'dcrImmutableId'
+  WorkspaceResourceId   = Get-Flat -Table $flat -PrimaryKey 'WorkspaceResourceId'   -FallbackKey 'workspaceResourceId'
+  WorkspaceName         = Get-Flat -Table $flat -PrimaryKey 'WorkspaceName'         -FallbackKey 'workspaceName'
+  RoleAssignmentSkipped = Get-Flat -Table $flat -PrimaryKey 'RoleAssignmentSkipped' -FallbackKey 'roleAssignmentSkipped'
+
+  WindowsInventoryScriptUrl = Get-Flat -Table $flat -PrimaryKey 'WindowsInventoryScriptUrl' -FallbackKey 'windowsInventoryScriptUrl'
+  MacInventoryScriptUrl     = Get-Flat -Table $flat -PrimaryKey 'MacInventoryScriptUrl'     -FallbackKey 'macInventoryScriptUrl'
+}
+
+
 
   # Safety checks
   if (-not $normalized.DceURI)         { throw "Missing output: DceURI (or dceURI)" }
   if (-not $normalized.DcrImmutableId) { throw "Missing output: DcrImmutableId (or dcrImmutableId)" }
-
+  if (-not $normalized.WindowsInventoryScriptUrl) { Write-Warn "Missing output: WindowsInventoryScriptUrl" }
+  if (-not $normalized.MacInventoryScriptUrl)     { Write-Warn "Missing output: MacInventoryScriptUrl" }
   return [pscustomobject]$normalized
 }
 
@@ -215,6 +221,25 @@ function Show-ReadyToPasteConfig {
   Write-Host ""
 }
 
+
+function Get-Flat {
+  param(
+    [Parameter(Mandatory)][hashtable] $Table,
+    [Parameter(Mandatory)][string]    $PrimaryKey,
+    [Parameter(Mandatory)][string]    $FallbackKey
+  )
+
+  if ($Table.ContainsKey($PrimaryKey) -and -not [string]::IsNullOrWhiteSpace([string]$Table[$PrimaryKey])) {
+    return $Table[$PrimaryKey]
+  }
+
+  if ($Table.ContainsKey($FallbackKey) -and -not [string]::IsNullOrWhiteSpace([string]$Table[$FallbackKey])) {
+    return $Table[$FallbackKey]
+  }
+
+  return $null
+}
+
 # ---------------------------
 # Main
 # ---------------------------
@@ -262,50 +287,22 @@ if ($AssignRbac) {
   Write-Warn "RBAC assignment skipped. If ingestion fails, assign 'Monitoring Metrics Publisher' on the DCR manually."
 }
 
-# Normalize output casing (handles dceURI vs DceURI, etc.)
-$dceOutput = $outputs.PSObject.Properties |
-    Where-Object { $_.Name -ieq 'DceURI' } |
-    Select-Object -First 1
-
-$dceUri = $dceOutput.Value.value
-
-$dcrOutput = $outputs.PSObject.Properties |
-    Where-Object { $_.Name -ieq 'DcrImmutableId' } |
-    Select-Object -First 1
-
-$dcrImmutableId = $dcrOutput.Value.value
-$dcrId = $dcrImmutableId
-
-
-$winOutput = $outputs.PSObject.Properties |
-    Where-Object { $_.Name -ieq 'WindowsInventoryScriptUrl' } |
-    Select-Object -First 1
-
-$winUrl = $winOutput.Value.value
-
-$macOutput = $outputs.PSObject.Properties |
-    Where-Object { $_.Name -ieq 'MacInventoryScriptUrl' } |
-    Select-Object -First 1
-
-$macUrl = $macOutput.Value.value
-
-
 # Final output block
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor White
 Write-Host "Enhanced Inventory - Values to paste into inventory scripts" -ForegroundColor White
 Write-Host "============================================================" -ForegroundColor White
-Write-Host ("TenantId:       {0}" -f ($TenantId ?? "<Enter Tenant ID>"))
-Write-Host ("ClientId:       {0}" -f ($ClientId ?? "<Enter Client ID>"))
-Write-Host ("ClientSecret:   {0}" -f ($ClientSecret ?? "<Enter Client Secret>"))
+Write-Host ("TenantId:       {0}" -f (if ($TenantId)     { $TenantId }     else { "<Enter Tenant ID>" }))
+Write-Host ("ClientId:       {0}" -f (if ($ClientId)     { $ClientId }     else { "<Enter Client ID>" }))
+Write-Host ("ClientSecret:   {0}" -f (if ($ClientSecret) { $ClientSecret } else { "<Enter Client Secret>" }))
 Write-Host ("DceURI:         {0}" -f $outputs.DceURI)
 Write-Host ("DcrImmutableId: {0}" -f $outputs.DcrImmutableId)
 Write-Host "============================================================" -ForegroundColor White
 Write-Host ""
 Write-Host ""
 Write-Host "Inventory Scripts:" -ForegroundColor Cyan
-Write-Host " Windows: $($outputs.WindowsInventoryScriptUrl)"
-Write-Host " macOS:   $($outputs.MacInventoryScriptUrl)"
+Write-Host " Windows: $($outputs.windowsInventoryScriptUrl)"
+Write-Host " macOS:   $($outputs.macInventoryScriptUrl)"
 Write-Host ""
 Write-Ok "Done."
 
@@ -315,7 +312,8 @@ Show-ReadyToPasteConfig `
   -TenantId $TenantId `
   -ClientId $ClientId `
   -ClientSecret $ClientSecret `
-  -DceURI $dceUri `
-  -DcrImmutableId $dcrId
+  -DceURI $outputs.DceURI `
+  -DcrImmutableId $outputs.DcrImmutableId
+
 
 
