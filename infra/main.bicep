@@ -45,12 +45,11 @@ param dceName string = 'dce-PowerStacksInventory'
 param dcrName string = 'dcr-PowerStacksInventory'
 
 // ---------------------------
-// RBAC (Post-deploy)
+// Optional RBAC
 // ---------------------------
-//
-// We intentionally do NOT collect an Entra ID object ID / client ID here.
-// Customers complete RBAC in the post-deploy onboarding script so the portal UI
-// stays simple and avoids confusion between “Object ID” and “Client ID”.
+
+@description('Optional. OBJECT ID (not Client ID) of the service principal used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment.')
+param ingestionSpObjectId string = ''
 
 // ==================================================
 // Table names
@@ -213,32 +212,35 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
     destinations: {
       logAnalytics: [
         {
-          name: 'la'
+          name: 'la-destination'
           workspaceResourceId: workspaceResourceId
         }
       ]
     }
 
     streamDeclarations: {
-      'Custom-PowerStacksDeviceInventory': { columns: deviceColumns }
-      'Custom-PowerStacksAppInventory':    { columns: appColumns }
-      'Custom-PowerStacksDriverInventory': { columns: driverColumns }
+      'Custom-${deviceTableName}': { columns: deviceColumns }
+      'Custom-${appTableName}':    { columns: appColumns }
+      'Custom-${driverTableName}': { columns: driverColumns }
     }
 
     dataFlows: [
       {
-        streams: [ 'Custom-PowerStacksDeviceInventory' ]
-        destinations: [ 'la' ]
+        streams: [ 'Custom-${deviceTableName}' ]
+        destinations: [ 'la-destination' ]
+        transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${deviceTableName}'
       }
       {
-        streams: [ 'Custom-PowerStacksAppInventory' ]
-        destinations: [ 'la' ]
+        streams: [ 'Custom-${appTableName}' ]
+        destinations: [ 'la-destination' ]
+        transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${appTableName}'
       }
       {
-        streams: [ 'Custom-PowerStacksDriverInventory' ]
-        destinations: [ 'la' ]
+        streams: [ 'Custom-${driverTableName}' ]
+        destinations: [ 'la-destination' ]
+        transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${driverTableName}'
       }
     ]
@@ -246,7 +248,20 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
 }
 
 // Optional RBAC for CreateNew DCR
-// NOTE: Role assignments are handled by post-deploy onboarding.
+var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '3913510d-42f4-4e42-8a64-420c390055eb'
+)
+
+resource dcrRoleNew 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (workspaceMode == 'CreateNew' && !empty(ingestionSpObjectId)) {
+  name: guid(dcrNew.id, ingestionSpObjectId, monitoringMetricsPublisherRoleDefinitionId)
+  scope: dcrNew
+  properties: {
+    roleDefinitionId: monitoringMetricsPublisherRoleDefinitionId
+    principalId: ingestionSpObjectId
+    principalType: 'ServicePrincipal'
+  }
+}
 
 // ==================================================
 // UseExisting path: Tables + DCR created in the workspace RG via module
@@ -270,7 +285,7 @@ module existingWorkspaceTablesAndDcr 'modules/workspaceTablesAndDcr.bicep' = if 
     appColumns: appColumns
     driverColumns: driverColumns
 
-    // RBAC handled post-deploy
+    ingestionSpObjectId: ingestionSpObjectId
   }
 }
 
@@ -291,13 +306,4 @@ output DcrImmutableId string = workspaceMode == 'CreateNew'
 output WorkspaceResourceId string = workspaceResourceId
 output WorkspaceName string = workspaceNameEffective
 
-output RoleAssignmentSkipped bool = true
-
-// ==================================================
-// Inventory Script References (static)
-// ==================================================
-
-output WindowsInventoryScriptUrl string = 'https://raw.githubusercontent.com/PowerStacks-BI/Windows-Custom-Inventory/main/Intune_Windows_Inventory.ps1'
-
-output MacInventoryScriptUrl string = 'https://raw.githubusercontent.com/PowerStacks-BI/Mac-Custom-Inventory/main/Mac_Custom_Inventory.sh'
-
+output RoleAssignmentSkipped bool = empty(ingestionSpObjectId)

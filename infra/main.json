@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "11449844315630167733"
+      "templateHash": "1214882488430417247"
     }
   },
   "parameters": {
@@ -67,6 +67,13 @@
       "defaultValue": "dcr-PowerStacksInventory",
       "metadata": {
         "description": "Name of the Data Collection Rule (DCR) to create."
+      }
+    },
+    "ingestionSpObjectId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional. OBJECT ID (not Client ID) of the service principal used for log ingestion. If provided, the deployment assigns DCR permissions automatically. If left blank, permissions must be assigned manually after deployment."
       }
     }
   },
@@ -245,7 +252,8 @@
       }
     ],
     "workspaceResourceId": "[if(equals(parameters('workspaceMode'), 'CreateNew'), resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.OperationalInsights/workspaces', parameters('existingWorkspaceName')))]",
-    "workspaceNameEffective": "[if(equals(parameters('workspaceMode'), 'CreateNew'), parameters('newWorkspaceName'), parameters('existingWorkspaceName'))]"
+    "workspaceNameEffective": "[if(equals(parameters('workspaceMode'), 'CreateNew'), parameters('newWorkspaceName'), parameters('existingWorkspaceName'))]",
+    "monitoringMetricsPublisherRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '3913510d-42f4-4e42-8a64-420c390055eb')]"
   },
   "resources": [
     {
@@ -336,48 +344,51 @@
         "destinations": {
           "logAnalytics": [
             {
-              "name": "la",
+              "name": "la-destination",
               "workspaceResourceId": "[variables('workspaceResourceId')]"
             }
           ]
         },
         "streamDeclarations": {
-          "Custom-PowerStacksDeviceInventory": {
+          "[format('Custom-{0}', variables('deviceTableName'))]": {
             "columns": "[variables('deviceColumns')]"
           },
-          "Custom-PowerStacksAppInventory": {
+          "[format('Custom-{0}', variables('appTableName'))]": {
             "columns": "[variables('appColumns')]"
           },
-          "Custom-PowerStacksDriverInventory": {
+          "[format('Custom-{0}', variables('driverTableName'))]": {
             "columns": "[variables('driverColumns')]"
           }
         },
         "dataFlows": [
           {
             "streams": [
-              "Custom-PowerStacksDeviceInventory"
+              "[format('Custom-{0}', variables('deviceTableName'))]"
             ],
             "destinations": [
-              "la"
+              "la-destination"
             ],
+            "transformKql": "source | extend TimeGenerated = now()",
             "outputStream": "[format('Custom-{0}', variables('deviceTableName'))]"
           },
           {
             "streams": [
-              "Custom-PowerStacksAppInventory"
+              "[format('Custom-{0}', variables('appTableName'))]"
             ],
             "destinations": [
-              "la"
+              "la-destination"
             ],
+            "transformKql": "source | extend TimeGenerated = now()",
             "outputStream": "[format('Custom-{0}', variables('appTableName'))]"
           },
           {
             "streams": [
-              "Custom-PowerStacksDriverInventory"
+              "[format('Custom-{0}', variables('driverTableName'))]"
             ],
             "destinations": [
-              "la"
+              "la-destination"
             ],
+            "transformKql": "source | extend TimeGenerated = now()",
             "outputStream": "[format('Custom-{0}', variables('driverTableName'))]"
           }
         ]
@@ -388,6 +399,21 @@
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('deviceTableName'))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('driverTableName'))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
+      ]
+    },
+    {
+      "condition": "[and(equals(parameters('workspaceMode'), 'CreateNew'), not(empty(parameters('ingestionSpObjectId'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.Insights/dataCollectionRules/{0}', parameters('dcrName'))]",
+      "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), parameters('ingestionSpObjectId'), variables('monitoringMetricsPublisherRoleDefinitionId'))]",
+      "properties": {
+        "roleDefinitionId": "[variables('monitoringMetricsPublisherRoleDefinitionId')]",
+        "principalId": "[parameters('ingestionSpObjectId')]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))]"
       ]
     },
     {
@@ -432,6 +458,9 @@
           },
           "driverColumns": {
             "value": "[variables('driverColumns')]"
+          },
+          "ingestionSpObjectId": {
+            "value": "[parameters('ingestionSpObjectId')]"
           }
         },
         "template": {
@@ -441,7 +470,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "2034960551794705814"
+              "templateHash": "11987336974179414373"
             }
           },
           "parameters": {
@@ -474,7 +503,17 @@
             },
             "driverColumns": {
               "type": "array"
+            },
+            "ingestionSpObjectId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. OBJECT ID (not Client ID) of the service principal used for log ingestion. If provided, the module assigns DCR permissions automatically."
+              }
             }
+          },
+          "variables": {
+            "monitoringMetricsPublisherRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '3913510d-42f4-4e42-8a64-420c390055eb')]"
           },
           "resources": [
             {
@@ -524,48 +563,51 @@
                 "destinations": {
                   "logAnalytics": [
                     {
-                      "name": "la",
+                      "name": "la-destination",
                       "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
                     }
                   ]
                 },
                 "streamDeclarations": {
-                  "Custom-PowerStacksDeviceInventory": {
+                  "[format('Custom-{0}', parameters('deviceTableName'))]": {
                     "columns": "[parameters('deviceColumns')]"
                   },
-                  "Custom-PowerStacksAppInventory": {
+                  "[format('Custom-{0}', parameters('appTableName'))]": {
                     "columns": "[parameters('appColumns')]"
                   },
-                  "Custom-PowerStacksDriverInventory": {
+                  "[format('Custom-{0}', parameters('driverTableName'))]": {
                     "columns": "[parameters('driverColumns')]"
                   }
                 },
                 "dataFlows": [
                   {
                     "streams": [
-                      "Custom-PowerStacksDeviceInventory"
+                      "[format('Custom-{0}', parameters('deviceTableName'))]"
                     ],
                     "destinations": [
-                      "la"
+                      "la-destination"
                     ],
+                    "transformKql": "source | extend TimeGenerated = now()",
                     "outputStream": "[format('Custom-{0}', parameters('deviceTableName'))]"
                   },
                   {
                     "streams": [
-                      "Custom-PowerStacksAppInventory"
+                      "[format('Custom-{0}', parameters('appTableName'))]"
                     ],
                     "destinations": [
-                      "la"
+                      "la-destination"
                     ],
+                    "transformKql": "source | extend TimeGenerated = now()",
                     "outputStream": "[format('Custom-{0}', parameters('appTableName'))]"
                   },
                   {
                     "streams": [
-                      "Custom-PowerStacksDriverInventory"
+                      "[format('Custom-{0}', parameters('driverTableName'))]"
                     ],
                     "destinations": [
-                      "la"
+                      "la-destination"
                     ],
+                    "transformKql": "source | extend TimeGenerated = now()",
                     "outputStream": "[format('Custom-{0}', parameters('driverTableName'))]"
                   }
                 ]
@@ -574,6 +616,21 @@
                 "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('appTableName'))]",
                 "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('deviceTableName'))]",
                 "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('driverTableName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('ingestionSpObjectId')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Insights/dataCollectionRules/{0}', parameters('dcrName'))]",
+              "name": "[guid(resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName')), parameters('ingestionSpObjectId'), variables('monitoringMetricsPublisherRoleDefinitionId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('monitoringMetricsPublisherRoleDefinitionId')]",
+                "principalId": "[parameters('ingestionSpObjectId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrName'))]"
               ]
             }
           ],
@@ -609,15 +666,7 @@
     },
     "RoleAssignmentSkipped": {
       "type": "bool",
-      "value": true
-    },
-    "WindowsInventoryScriptUrl": {
-      "type": "string",
-      "value": "https://raw.githubusercontent.com/PowerStacks-BI/Windows-Custom-Inventory/main/Intune_Windows_Inventory.ps1"
-    },
-    "MacInventoryScriptUrl": {
-      "type": "string",
-      "value": "https://raw.githubusercontent.com/PowerStacks-BI/Mac-Custom-Inventory/main/Mac_Custom_Inventory.sh"
+      "value": "[empty(parameters('ingestionSpObjectId'))]"
     }
   }
 }

@@ -13,9 +13,8 @@ param deviceColumns array
 param appColumns array
 param driverColumns array
 
-// NOTE:
-// RBAC for log ingestion is intentionally handled in post-deploy onboarding.
-// This avoids confusion between Application (client) ID vs service principal object ID.
+@description('Optional. OBJECT ID (not Client ID) of the service principal used for log ingestion. If provided, the module assigns DCR permissions automatically.')
+param ingestionSpObjectId string = ''
 
 resource law 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: workspaceName
@@ -72,35 +71,53 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
     destinations: {
       logAnalytics: [
         {
-          name: 'la'
+          name: 'la-destination'
           workspaceResourceId: law.id
         }
       ]
     }
 
     streamDeclarations: {
-      'Custom-PowerStacksDeviceInventory': { columns: deviceColumns }
-      'Custom-PowerStacksAppInventory':    { columns: appColumns }
-      'Custom-PowerStacksDriverInventory': { columns: driverColumns }
+      'Custom-${deviceTableName}': { columns: deviceColumns }
+      'Custom-${appTableName}':    { columns: appColumns }
+      'Custom-${driverTableName}': { columns: driverColumns }
     }
 
     dataFlows: [
       {
-        streams: [ 'Custom-PowerStacksDeviceInventory' ]
-        destinations: [ 'la' ]
+        streams: [ 'Custom-${deviceTableName}' ]
+        destinations: [ 'la-destination' ]
+        transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${deviceTableName}'
       }
       {
-        streams: [ 'Custom-PowerStacksAppInventory' ]
-        destinations: [ 'la' ]
+        streams: [ 'Custom-${appTableName}' ]
+        destinations: [ 'la-destination' ]
+        transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${appTableName}'
       }
       {
-        streams: [ 'Custom-PowerStacksDriverInventory' ]
-        destinations: [ 'la' ]
+        streams: [ 'Custom-${driverTableName}' ]
+        destinations: [ 'la-destination' ]
+        transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${driverTableName}'
       }
     ]
+  }
+}
+
+var monitoringMetricsPublisherRoleDefinitionId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '3913510d-42f4-4e42-8a64-420c390055eb'
+)
+
+resource dcrRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(ingestionSpObjectId)) {
+  name: guid(dcr.id, ingestionSpObjectId, monitoringMetricsPublisherRoleDefinitionId)
+  scope: dcr
+  properties: {
+    roleDefinitionId: monitoringMetricsPublisherRoleDefinitionId
+    principalId: ingestionSpObjectId
+    principalType: 'ServicePrincipal'
   }
 }
 
