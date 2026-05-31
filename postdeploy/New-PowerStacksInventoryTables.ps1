@@ -7,6 +7,7 @@
     - PowerStacksDeviceInventory_CL
     - PowerStacksAppInventory_CL
     - PowerStacksDriverInventory_CL
+    - PowerStacksAppUsage_CL
 
   This script does not create a workspace, DCR, DCE, or role assignments.
 
@@ -157,9 +158,10 @@ Set-AzContext -Subscription $SubscriptionId | Out-Null
 # ----------------------------
 # Table names
 # ----------------------------
-$DeviceTableName = 'PowerStacksDeviceInventory_CL'
-$AppTableName    = 'PowerStacksAppInventory_CL'
-$DriverTableName = 'PowerStacksDriverInventory_CL'
+$DeviceTableName   = 'PowerStacksDeviceInventory_CL'
+$AppTableName      = 'PowerStacksAppInventory_CL'
+$DriverTableName   = 'PowerStacksDriverInventory_CL'
+$AppUsageTableName = 'PowerStacksAppUsage_CL'
 
 # ----------------------------
 # Column schemas (match template)
@@ -214,11 +216,31 @@ $DriverColumns = @(
   @{ name = 'ListedDrivers10_s';   type = 'string'   }
 )
 
+$AppUsageColumns = @(
+  @{ name = 'TimeGenerated';       type = 'datetime' },
+  @{ name = 'ComputerName_s';      type = 'string'   },
+  @{ name = 'ManagedDeviceID_g';   type = 'string'   },
+  @{ name = 'UserSid_s';           type = 'string'   },
+  @{ name = 'UserSidType_s';       type = 'string'   },
+  @{ name = 'AadUserId_g';         type = 'string'   },
+  @{ name = 'UPN_s';               type = 'string'   },
+  @{ name = 'UserName_s';          type = 'string'   },
+  @{ name = 'ResolvedAppName_s';   type = 'string'   },
+  @{ name = 'Publisher_s';         type = 'string'   },
+  @{ name = 'ProductCode_g';       type = 'string'   },
+  @{ name = 'ExeInfo_s';           type = 'string'   },
+  @{ name = 'ResolutionSource_s'; type = 'string'   },
+  @{ name = 'LastUsedTime';        type = 'datetime' },
+  @{ name = 'FirstSeen';           type = 'datetime' },
+  @{ name = 'InFocusSeconds';      type = 'int'      }
+)
+
 # ----------------------------
 # Create/update tables
 # ----------------------------
-New-OrUpdate-WorkspaceTable -SubscriptionId $SubscriptionId -ResourceGroupName $ResourceGroupName -WorkspaceName $WorkspaceName -TableName $DeviceTableName -Columns $DeviceColumns
-New-OrUpdate-WorkspaceTable -SubscriptionId $SubscriptionId -ResourceGroupName $ResourceGroupName -WorkspaceName $WorkspaceName -TableName $AppTableName    -Columns $AppColumns
-New-OrUpdate-WorkspaceTable -SubscriptionId $SubscriptionId -ResourceGroupName $ResourceGroupName -WorkspaceName $WorkspaceName -TableName $DriverTableName -Columns $DriverColumns
+New-OrUpdate-WorkspaceTable -SubscriptionId $SubscriptionId -ResourceGroupName $ResourceGroupName -WorkspaceName $WorkspaceName -TableName $DeviceTableName   -Columns $DeviceColumns
+New-OrUpdate-WorkspaceTable -SubscriptionId $SubscriptionId -ResourceGroupName $ResourceGroupName -WorkspaceName $WorkspaceName -TableName $AppTableName      -Columns $AppColumns
+New-OrUpdate-WorkspaceTable -SubscriptionId $SubscriptionId -ResourceGroupName $ResourceGroupName -WorkspaceName $WorkspaceName -TableName $DriverTableName   -Columns $DriverColumns
+New-OrUpdate-WorkspaceTable -SubscriptionId $SubscriptionId -ResourceGroupName $ResourceGroupName -WorkspaceName $WorkspaceName -TableName $AppUsageTableName -Columns $AppUsageColumns
 
 Write-Host "Done. Tables ensured in workspace '$WorkspaceName'."

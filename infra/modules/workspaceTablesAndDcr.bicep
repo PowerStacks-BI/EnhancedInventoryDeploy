@@ -8,10 +8,12 @@ param location string
 param deviceTableName string
 param appTableName string
 param driverTableName string
+param appUsageTableName string
 
 param deviceColumns array
 param appColumns array
 param driverColumns array
+param appUsageColumns array
 
 @description('Optional. Object ID of the Enterprise Application (service principal). NOT the Application (Client) ID. If provided, the module assigns DCR permissions automatically.')
 param enterpriseAppObjectId string = ''
@@ -67,6 +69,18 @@ resource driverTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01
   }
 }
 
+resource appUsageTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
+  parent: law
+  name: appUsageTableName
+  properties: {
+    plan: 'Analytics'
+    schema: {
+      name: appUsageTableName
+      columns: appUsageColumns
+    }
+  }
+}
+
 resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   name: dcrName
   location: location
@@ -74,6 +88,7 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
     deviceTable
     appTable
     driverTable
+    appUsageTable
   ]
   properties: {
     description: 'PowerStacks Enhanced Inventory ingestion via Log Ingestion API'
@@ -89,9 +104,10 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
     }
 
     streamDeclarations: {
-      'Custom-${deviceTableName}': { columns: deviceColumns }
-      'Custom-${appTableName}':    { columns: appColumns }
-      'Custom-${driverTableName}': { columns: driverColumns }
+      'Custom-${deviceTableName}':   { columns: deviceColumns }
+      'Custom-${appTableName}':      { columns: appColumns }
+      'Custom-${driverTableName}':   { columns: driverColumns }
+      'Custom-${appUsageTableName}': { columns: appUsageColumns }
     }
 
     dataFlows: [
@@ -112,6 +128,12 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
         destinations: [ 'la-destination' ]
         transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${driverTableName}'
+      }
+      {
+        streams: [ 'Custom-${appUsageTableName}' ]
+        destinations: [ 'la-destination' ]
+        transformKql: 'source | extend TimeGenerated = now()'
+        outputStream: 'Custom-${appUsageTableName}'
       }
     ]
   }

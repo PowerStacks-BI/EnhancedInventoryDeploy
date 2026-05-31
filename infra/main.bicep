@@ -55,9 +55,10 @@ param enterpriseAppObjectId string = ''
 // Table names
 // ==================================================
 
-var deviceTableName = 'PowerStacksDeviceInventory_CL'
-var appTableName    = 'PowerStacksAppInventory_CL'
-var driverTableName = 'PowerStacksDriverInventory_CL'
+var deviceTableName   = 'PowerStacksDeviceInventory_CL'
+var appTableName      = 'PowerStacksAppInventory_CL'
+var driverTableName   = 'PowerStacksDriverInventory_CL'
+var appUsageTableName = 'PowerStacksAppUsage_CL'
 
 // ==================================================
 // Schemas (columns defined once, reused)
@@ -111,6 +112,25 @@ var driverColumns = [
   { name: 'ListedDrivers8_s', type: 'string' }
   { name: 'ListedDrivers9_s', type: 'string' }
   { name: 'ListedDrivers10_s', type: 'string' }
+]
+
+var appUsageColumns = [
+  { name: 'TimeGenerated',      type: 'datetime' }
+  { name: 'ComputerName_s',     type: 'string' }
+  { name: 'ManagedDeviceID_g',  type: 'string' }
+  { name: 'UserSid_s',          type: 'string' }
+  { name: 'UserSidType_s',      type: 'string' }
+  { name: 'AadUserId_g',        type: 'string' }
+  { name: 'UPN_s',              type: 'string' }
+  { name: 'UserName_s',         type: 'string' }
+  { name: 'ResolvedAppName_s',  type: 'string' }
+  { name: 'Publisher_s',        type: 'string' }
+  { name: 'ProductCode_g',      type: 'string' }
+  { name: 'ExeInfo_s',          type: 'string' }
+  { name: 'ResolutionSource_s', type: 'string' }
+  { name: 'LastUsedTime',       type: 'datetime' }
+  { name: 'FirstSeen',          type: 'datetime' }
+  { name: 'InFocusSeconds',     type: 'int' }
 ]
 
 // ==================================================
@@ -199,6 +219,18 @@ resource driverTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10
   }
 }
 
+resource appUsageTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
+  parent: lawNew
+  name: appUsageTableName
+  properties: {
+    plan: 'Analytics'
+    schema: {
+      name: appUsageTableName
+      columns: appUsageColumns
+    }
+  }
+}
+
 resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (workspaceMode == 'CreateNew') {
   name: dcrName
   location: location
@@ -206,6 +238,7 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
     deviceTableNew
     appTableNew
     driverTableNew
+    appUsageTableNew
   ]
   properties: {
     description: 'PowerStacks Enhanced Inventory ingestion via Log Ingestion API'
@@ -221,9 +254,10 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
     }
 
     streamDeclarations: {
-      'Custom-${deviceTableName}': { columns: deviceColumns }
-      'Custom-${appTableName}':    { columns: appColumns }
-      'Custom-${driverTableName}': { columns: driverColumns }
+      'Custom-${deviceTableName}':   { columns: deviceColumns }
+      'Custom-${appTableName}':      { columns: appColumns }
+      'Custom-${driverTableName}':   { columns: driverColumns }
+      'Custom-${appUsageTableName}': { columns: appUsageColumns }
     }
 
     dataFlows: [
@@ -244,6 +278,12 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
         destinations: [ 'la-destination' ]
         transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${driverTableName}'
+      }
+      {
+        streams: [ 'Custom-${appUsageTableName}' ]
+        destinations: [ 'la-destination' ]
+        transformKql: 'source | extend TimeGenerated = now()'
+        outputStream: 'Custom-${appUsageTableName}'
       }
     ]
   }
@@ -279,13 +319,15 @@ module existingWorkspaceTablesAndDcr 'modules/workspaceTablesAndDcr.bicep' = if 
     dceName: dceName
     location: effectiveLocation
 
-    deviceTableName: deviceTableName
-    appTableName: appTableName
-    driverTableName: driverTableName
+    deviceTableName:   deviceTableName
+    appTableName:      appTableName
+    driverTableName:   driverTableName
+    appUsageTableName: appUsageTableName
 
-    deviceColumns: deviceColumns
-    appColumns: appColumns
-    driverColumns: driverColumns
+    deviceColumns:   deviceColumns
+    appColumns:      appColumns
+    driverColumns:   driverColumns
+    appUsageColumns: appUsageColumns
 
     enterpriseAppObjectId: enterpriseAppObjectId
   }
