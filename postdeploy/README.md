@@ -152,14 +152,16 @@ Then run the same commands shown above from a PowerShell prompt.
 
 ## Validation
 
-After onboarding is complete and inventory scripts are deployed, validate ingestion:
+After onboarding is complete and inventory scripts are deployed, validate ingestion by querying any of the four tables that should be receiving data:
 
 ```kql
-PowerStacksDeviceInventory_CL
-| take 10
+PowerStacksDeviceInventory_CL | take 10
+PowerStacksAppInventory_CL    | take 10
+PowerStacksDriverInventory_CL | take 10
+PowerStacksAppUsage_CL        | take 10
 ```
 
-If rows appear, ingestion is working.
+If rows appear, ingestion is working. The first three tables are populated by the Windows and macOS inventory scripts. `PowerStacksAppUsage_CL` is populated by the SRUM-based app usage collector, which is shipped separately from the standard inventory scripts (see the App Usage section of the main README).
 
 ---
 
