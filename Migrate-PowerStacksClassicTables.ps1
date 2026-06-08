@@ -67,6 +67,7 @@ param(
     [Parameter(Mandatory)][string]$SubscriptionId,
     [Parameter(Mandatory)][string]$ResourceGroupName,
     [Parameter(Mandatory)][string]$WorkspaceName,
+    [string]$TenantId,
     [string[]]$TableName = @(
         'PowerStacksAppInventory_CL',
         'PowerStacksDeviceInventory_CL',
@@ -84,12 +85,29 @@ $migrateApiVersion = '2021-12-01-preview'
 function Get-TablePath { param($Table) "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.OperationalInsights/workspaces/$WorkspaceName/tables/$Table" }
 
 # --- Ensure we have an Azure session on the correct subscription ---
+# Sign in automatically if there is no session, or if the target subscription
+# is not reachable from the current session (e.g. signed in to a different
+# tenant). This keeps the script hands-off and avoids a manual Connect-AzAccount.
+$connect = @{ Subscription = $SubscriptionId }
+if ($TenantId) { $connect['Tenant'] = $TenantId }
+
+$needSignIn = $false
 $ctx = Get-AzContext -ErrorAction SilentlyContinue
-if (-not $ctx) {
-    Write-Host 'No Azure session found. Launching Connect-AzAccount...' -ForegroundColor Yellow
-    Connect-AzAccount -Subscription $SubscriptionId | Out-Null
+if (-not $ctx -or -not $ctx.Account) {
+    $needSignIn = $true
 } elseif ($ctx.Subscription.Id -ne $SubscriptionId) {
-    Write-Host "Setting context to subscription $SubscriptionId..." -ForegroundColor Yellow
+    # Already signed in but on a different subscription. Try to switch within the
+    # current session; if the subscription is not available there, sign in.
+    try {
+        Set-AzContext -Subscription $SubscriptionId -ErrorAction Stop | Out-Null
+    } catch {
+        $needSignIn = $true
+    }
+}
+
+if ($needSignIn) {
+    Write-Host 'Signing in to Azure...' -ForegroundColor Yellow
+    Connect-AzAccount @connect | Out-Null
     Set-AzContext -Subscription $SubscriptionId | Out-Null
 }
 

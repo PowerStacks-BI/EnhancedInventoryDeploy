@@ -32,6 +32,39 @@ This guide documents an end-to-end, customer-run deployment of PowerStacks Enhan
 
 > **Important:** The Object ID from Enterprise Applications is different from the one shown in App Registrations. The ARM template requires the **Enterprise Application Object ID** (the service principal Object ID), not the App Registration Object ID.
 
+## Upgrading from the Legacy Collector
+
+Skip this section for new installations. It applies only when you are **upgrading an environment that previously ran PowerStacks Enhanced Inventory on the legacy HTTP Data Collector API**, and you are deploying into that **existing** Log Analytics workspace.
+
+Those older deployments created the inventory tables (`PowerStacksAppInventory_CL`, `PowerStacksDeviceInventory_CL`, `PowerStacksDriverInventory_CL`) as **Classic** tables. The current template manages tables through the DCR-based tables API, and Azure does not allow changing a Classic table's schema with that API. If you deploy without migrating first, the deployment fails with an error like:
+
+> Changing Classic table PowerStacksAppInventory_CL schema by using DataCollectionRuleBased tables api is forbidden, please migrate the table first.
+
+To resolve it, run the one-time migration script **before** deploying (Step 3):
+
+1. Open a PowerShell session with the **Az** module installed (Azure Cloud Shell already has it).
+2. Run the script against your existing workspace:
+
+   ```powershell
+   .\Migrate-PowerStacksClassicTables.ps1 `
+     -SubscriptionId <your-subscription-id> `
+     -ResourceGroupName <workspace-resource-group> `
+     -WorkspaceName <workspace-name>
+   ```
+
+   Add `-WhatIf` first if you want to preview the changes without making them.
+
+The script signs you in if needed, then migrates only the tables that are still Classic. It is safe to re-run: tables that are already migrated or not present are skipped, so it does nothing on a new install.
+
+**What the migration does and does not do:**
+
+- It is **one-way**: a table cannot be converted back to Classic.
+- It **preserves all existing data** in the tables.
+- The **legacy Data Collector API keeps writing** to the migrated tables during Microsoft's grace period, so there is no reporting gap while you cut the collector over to the Log Ingestion API.
+- It creates **no managed identity and no role assignment**. It runs as you, so you need permission to modify tables on the workspace (**Log Analytics Contributor** or **Owner**).
+
+After the script reports the tables as migrated, continue to Step 3.
+
 ## Step 3 – Deploy Azure Resources
 
 1. Use the **Deploy to Azure** button from the repository README.
@@ -85,6 +118,7 @@ Run the `LogIngestionAPI_CheckDCR` script to retrieve and review the full Data C
 
 ## Summary Checklist
 
+- [ ] (Upgrades only) Legacy Classic tables migrated to DCR-based (see "Upgrading from the Legacy Collector")
 - [ ] App Registration created (Step 1)
 - [ ] Client ID, Tenant ID, and Client Secret recorded (Step 1)
 - [ ] Enterprise Application Object ID recorded (Step 2)
