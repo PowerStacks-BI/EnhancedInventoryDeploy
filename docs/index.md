@@ -43,7 +43,14 @@ Those older deployments created the inventory tables (`PowerStacksAppInventory_C
 To resolve it, run the one-time migration script **before** deploying (Step 3):
 
 1. Open a PowerShell session with the **Az** module installed (Azure Cloud Shell already has it).
-2. Run the script against your existing workspace:
+2. Download the migration script:
+
+   ```powershell
+   $raw = "https://raw.githubusercontent.com/powerstacks-corp/EnhancedInventoryDeploy/main/migrate/Migrate-PowerStacksClassicTables.ps1"
+   Invoke-WebRequest -Uri $raw -OutFile .\Migrate-PowerStacksClassicTables.ps1
+   ```
+
+3. Run it against your existing workspace:
 
    ```powershell
    .\Migrate-PowerStacksClassicTables.ps1 `
@@ -73,6 +80,8 @@ After the script reports the tables as migrated, continue to Step 3.
 4. When prompted for **Enterprise App Object Id**, paste the Object ID from Step 2.
 
 > **Note:** The Enterprise App Object Id field is optional. If provided, the deployment automatically assigns the required permissions (Step 4). If left blank, you must assign permissions manually after deployment.
+
+> **Deploying without the portal button?** You can deploy the same template (`infra/main.json`) with the Azure CLI or Azure PowerShell, then run the [post-deploy onboarding script](https://github.com/powerstacks-corp/EnhancedInventoryDeploy/tree/main/postdeploy) to create the app registration, assign the Monitoring Metrics Publisher role, and print the values for your inventory scripts.
 
 ## Step 4 – Automatic RBAC Assignment
 

@@ -352,4 +352,4 @@ output DcrImmutableId string = workspaceMode == 'CreateNew'
 output WorkspaceResourceId string = workspaceResourceId
 output WorkspaceName string = workspaceNameEffective
 
-output RoleAssignmentSkipped bool = empty(enterpriseAppObjectId)
+output RoleAssignmentSkipped string = empty(enterpriseAppObjectId) ? 'Yes - assign Monitoring Metrics Publisher on the DCR manually' : 'No - assigned automatically during deployment'

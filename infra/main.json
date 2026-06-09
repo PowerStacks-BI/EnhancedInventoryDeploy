@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "13815534556247581221"
+      "templateHash": "7383149619426569143"
     }
   },
   "parameters": {
@@ -813,8 +813,8 @@
       "value": "[variables('workspaceNameEffective')]"
     },
     "RoleAssignmentSkipped": {
-      "type": "bool",
-      "value": "[empty(parameters('enterpriseAppObjectId'))]"
+      "type": "string",
+      "value": "[if(empty(parameters('enterpriseAppObjectId')), 'Yes - assign Monitoring Metrics Publisher on the DCR manually', 'No - assigned automatically during deployment')]"
     }
   }
 }

@@ -11,7 +11,7 @@ The deployment creates (or reuses) a **Log Analytics Workspace**, configures req
 Click the button below to deploy the required Azure resources:
 
 <p>
-  <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FPowerStacks-BI%2FEnhancedInventoryDeploy%2Fmain%2Finfra%2Fmain.json">
+  <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpowerstacks-corp%2FEnhancedInventoryDeploy%2Fmain%2Finfra%2Fmain.json">
     <img src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure">
   </a>
 </p>

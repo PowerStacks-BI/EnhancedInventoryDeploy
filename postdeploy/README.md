@@ -1,7 +1,7 @@
 # Post-Deployment Onboarding  
 **PowerStacks Enhanced Inventory**
 
-This folder contains the **post-deployment onboarding script** required after deploying the Azure infrastructure using the **Deploy to Azure** button.
+This folder contains the **post-deployment onboarding script**. It is optional. It automates the identity, permissions, and value-capture steps that follow the Azure deployment. Use it when you deploy without the portal **Deploy to Azure** button (for example, via the Azure CLI or a pipeline), or when you would rather automate those steps than do them by hand as described in the main deployment guide.
 
 The Azure deployment creates all required **Azure resources** (Log Analytics workspace, tables, DCR, DCE).  
 This script completes the **identity, permissions, and validation** steps that cannot be handled reliably by ARM/Bicep alone.
@@ -21,12 +21,11 @@ This two-step model is intentional and provides the most reliable experience acr
 
 ## When do I need to run this?
 
-After you complete the **Deploy to Azure** step and see **“Deployment complete”** in the Azure Portal, you must run this script **once**.
+If you choose this path, run the script **once** after the deployment shows **“Deployment complete”** in the Azure Portal.
 
 You do **not** need to rerun this script unless:
 - You rotate the client secret
 - You redeploy the DCR and want to reassign permissions
-- You are migrating legacy tables (future scenario)
 
 ---
 
@@ -44,7 +43,7 @@ Using **Azure Cloud Shell** avoids installing any tools locally and is the simpl
 ### Step 2: Download the onboarding script
 
 ```powershell
-$repo = "PowerStacks-BI/EnhancedInventoryDeploy"
+$repo = "powerstacks-corp/EnhancedInventoryDeploy"
 $raw  = "https://raw.githubusercontent.com/$repo/main/postdeploy/Onboard-EnhancedInventory.ps1"
 
 Invoke-WebRequest -Uri $raw -OutFile .\Onboard-EnhancedInventory.ps1
@@ -170,8 +169,9 @@ If rows appear, ingestion is working. The first three tables are populated by th
 1. Update the Windows and macOS inventory scripts using the printed values
 2. Deploy the scripts using Intune or your preferred device management tool
 
-Future versions of this onboarding script will support:
-- Legacy table migration
+Migrating from the legacy HTTP Data Collector API? Classic-to-DCR table migration is handled by a separate script, `migrate/Migrate-PowerStacksClassicTables.ps1`. Run it once before deploying (see the main deployment guide).
+
+Future versions of this onboarding script may add:
 - Automated Intune Proactive Remediation deployment
 - Optional validation checks
 
