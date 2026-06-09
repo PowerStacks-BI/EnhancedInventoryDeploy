@@ -84,29 +84,35 @@ $migrateApiVersion = '2021-12-01-preview'
 
 function Get-TablePath { param($Table) "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.OperationalInsights/workspaces/$WorkspaceName/tables/$Table" }
 
-# --- Ensure we have an Azure session on the correct subscription ---
-# Sign in automatically if there is no session, or if the target subscription
-# is not reachable from the current session (e.g. signed in to a different
-# tenant). This keeps the script hands-off and avoids a manual Connect-AzAccount.
+# --- Ensure a usable Azure session for the target subscription ---
+# A cached token can go stale (common on tenants with conditional access, which
+# also block device-code sign-in) and cannot always be refreshed silently. So we
+# validate the session with a real token request and fall back to an interactive
+# sign-in. Interactive sign-in is required on locked-down tenants: in Azure Cloud
+# Shell you are already signed in; locally a browser window opens. Device-code
+# auth is never used. If your tenant enforces conditional access, you can also run
+# Connect-AzAccount yourself before this script.
 $connect = @{ Subscription = $SubscriptionId }
 if ($TenantId) { $connect['Tenant'] = $TenantId }
 
-$needSignIn = $false
+$haveSession = $false
 $ctx = Get-AzContext -ErrorAction SilentlyContinue
-if (-not $ctx -or -not $ctx.Account) {
-    $needSignIn = $true
-} elseif ($ctx.Subscription.Id -ne $SubscriptionId) {
-    # Already signed in but on a different subscription. Try to switch within the
-    # current session; if the subscription is not available there, sign in.
+if ($ctx -and $ctx.Account) {
     try {
-        Set-AzContext -Subscription $SubscriptionId -ErrorAction Stop | Out-Null
+        if ($ctx.Subscription.Id -ne $SubscriptionId) {
+            Set-AzContext -Subscription $SubscriptionId -ErrorAction Stop | Out-Null
+        }
+        # Force a token request: a stale or conditional-access-blocked session
+        # throws here instead of failing later, mid-run.
+        Get-AzAccessToken -WarningAction SilentlyContinue -ErrorAction Stop | Out-Null
+        $haveSession = $true
     } catch {
-        $needSignIn = $true
+        $haveSession = $false
     }
 }
 
-if ($needSignIn) {
-    Write-Host 'Signing in to Azure...' -ForegroundColor Yellow
+if (-not $haveSession) {
+    Write-Host 'Signing in to Azure (an interactive sign-in window may open)...' -ForegroundColor Yellow
     Connect-AzAccount @connect | Out-Null
     Set-AzContext -Subscription $SubscriptionId | Out-Null
 }
