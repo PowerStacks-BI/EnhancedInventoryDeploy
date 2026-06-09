@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "7383149619426569143"
+      "templateHash": "17179173050814432875"
     }
   },
   "parameters": {
@@ -402,22 +402,6 @@
     },
     {
       "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
-      "type": "Microsoft.OperationalInsights/workspaces/tables",
-      "apiVersion": "2022-10-01",
-      "name": "[format('{0}/{1}', parameters('newWorkspaceName'), variables('appUsageTableName'))]",
-      "properties": {
-        "plan": "Analytics",
-        "schema": {
-          "name": "[variables('appUsageTableName')]",
-          "columns": "[variables('appUsageColumns')]"
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName'))]"
-      ]
-    },
-    {
-      "condition": "[equals(parameters('workspaceMode'), 'CreateNew')]",
       "type": "Microsoft.Insights/dataCollectionRules",
       "apiVersion": "2024-03-11",
       "name": "[parameters('dcrName')]",
@@ -492,7 +476,6 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('appTableName'))]",
-        "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('appUsageTableName'))]",
         "[resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dceName'))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('deviceTableName'))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('newWorkspaceName'), variables('driverTableName'))]",
@@ -572,7 +555,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "11741877599930977344"
+              "templateHash": "1030834190048830950"
             }
           },
           "parameters": {
@@ -673,18 +656,6 @@
               }
             },
             {
-              "type": "Microsoft.OperationalInsights/workspaces/tables",
-              "apiVersion": "2022-10-01",
-              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('appUsageTableName'))]",
-              "properties": {
-                "plan": "Analytics",
-                "schema": {
-                  "name": "[parameters('appUsageTableName')]",
-                  "columns": "[parameters('appUsageColumns')]"
-                }
-              }
-            },
-            {
               "type": "Microsoft.Insights/dataCollectionRules",
               "apiVersion": "2024-03-11",
               "name": "[parameters('dcrName')]",
@@ -759,7 +730,6 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('appTableName'))]",
-                "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('appUsageTableName'))]",
                 "[resourceId('Microsoft.Insights/dataCollectionEndpoints', parameters('dceName'))]",
                 "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('deviceTableName'))]",
                 "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspaceName'), parameters('driverTableName'))]"

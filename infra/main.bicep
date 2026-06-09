@@ -219,17 +219,11 @@ resource driverTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10
   }
 }
 
-resource appUsageTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = if (workspaceMode == 'CreateNew') {
-  parent: lawNew
-  name: appUsageTableName
-  properties: {
-    plan: 'Analytics'
-    schema: {
-      name: appUsageTableName
-      columns: appUsageColumns
-    }
-  }
-}
+// The PowerStacksAppUsage_CL table is intentionally NOT created here. App Usage
+// is a separate, optional add-on; its table is created by the intune-app-usage
+// repo (New-PowerStacksAppUsageTable.ps1) during App Usage onboarding. The DCR
+// below keeps the AppUsage stream and dataFlow so the shared DCR stays ready to
+// route App Usage data. If appUsageColumns changes, update that script to match.
 
 resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (workspaceMode == 'CreateNew') {
   name: dcrName
@@ -238,7 +232,6 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
     deviceTableNew
     appTableNew
     driverTableNew
-    appUsageTableNew
   ]
   properties: {
     description: 'PowerStacks Enhanced Inventory ingestion via Log Ingestion API'
