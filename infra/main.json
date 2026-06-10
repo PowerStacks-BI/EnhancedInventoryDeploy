@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "17179173050814432875"
+      "templateHash": "17899722232576358269"
     }
   },
   "parameters": {
@@ -81,7 +81,6 @@
     "deviceTableName": "PowerStacksDeviceInventory_CL",
     "appTableName": "PowerStacksAppInventory_CL",
     "driverTableName": "PowerStacksDriverInventory_CL",
-    "appUsageTableName": "PowerStacksAppUsage_CL",
     "deviceColumns": [
       {
         "name": "TimeGenerated",
@@ -252,72 +251,6 @@
         "type": "string"
       }
     ],
-    "appUsageColumns": [
-      {
-        "name": "TimeGenerated",
-        "type": "datetime"
-      },
-      {
-        "name": "ComputerName_s",
-        "type": "string"
-      },
-      {
-        "name": "ManagedDeviceID_g",
-        "type": "string"
-      },
-      {
-        "name": "UserSid_s",
-        "type": "string"
-      },
-      {
-        "name": "UserSidType_s",
-        "type": "string"
-      },
-      {
-        "name": "AadUserId_g",
-        "type": "string"
-      },
-      {
-        "name": "UPN_s",
-        "type": "string"
-      },
-      {
-        "name": "UserName_s",
-        "type": "string"
-      },
-      {
-        "name": "ResolvedAppName_s",
-        "type": "string"
-      },
-      {
-        "name": "Publisher_s",
-        "type": "string"
-      },
-      {
-        "name": "ProductCode_g",
-        "type": "string"
-      },
-      {
-        "name": "ExeInfo_s",
-        "type": "string"
-      },
-      {
-        "name": "ResolutionSource_s",
-        "type": "string"
-      },
-      {
-        "name": "LastUsedTime",
-        "type": "datetime"
-      },
-      {
-        "name": "FirstSeen",
-        "type": "datetime"
-      },
-      {
-        "name": "InFocusSeconds",
-        "type": "int"
-      }
-    ],
     "workspaceResourceId": "[if(equals(parameters('workspaceMode'), 'CreateNew'), resourceId('Microsoft.OperationalInsights/workspaces', parameters('newWorkspaceName')), extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('existingWorkspaceSubscriptionId'), parameters('existingWorkspaceResourceGroup')), 'Microsoft.OperationalInsights/workspaces', parameters('existingWorkspaceName')))]",
     "workspaceNameEffective": "[if(equals(parameters('workspaceMode'), 'CreateNew'), parameters('newWorkspaceName'), parameters('existingWorkspaceName'))]",
     "monitoringMetricsPublisherRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '3913510d-42f4-4e42-8a64-420c390055eb')]"
@@ -426,9 +359,6 @@
           },
           "[format('Custom-{0}', variables('driverTableName'))]": {
             "columns": "[variables('driverColumns')]"
-          },
-          "[format('Custom-{0}', variables('appUsageTableName'))]": {
-            "columns": "[variables('appUsageColumns')]"
           }
         },
         "dataFlows": [
@@ -461,16 +391,6 @@
             ],
             "transformKql": "source | extend TimeGenerated = now()",
             "outputStream": "[format('Custom-{0}', variables('driverTableName'))]"
-          },
-          {
-            "streams": [
-              "[format('Custom-{0}', variables('appUsageTableName'))]"
-            ],
-            "destinations": [
-              "la-destination"
-            ],
-            "transformKql": "source | extend TimeGenerated = now()",
-            "outputStream": "[format('Custom-{0}', variables('appUsageTableName'))]"
           }
         ]
       },
@@ -529,9 +449,6 @@
           "driverTableName": {
             "value": "[variables('driverTableName')]"
           },
-          "appUsageTableName": {
-            "value": "[variables('appUsageTableName')]"
-          },
           "deviceColumns": {
             "value": "[variables('deviceColumns')]"
           },
@@ -540,9 +457,6 @@
           },
           "driverColumns": {
             "value": "[variables('driverColumns')]"
-          },
-          "appUsageColumns": {
-            "value": "[variables('appUsageColumns')]"
           },
           "enterpriseAppObjectId": {
             "value": "[parameters('enterpriseAppObjectId')]"
@@ -555,7 +469,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "1030834190048830950"
+              "templateHash": "9559687573024369100"
             }
           },
           "parameters": {
@@ -580,9 +494,6 @@
             "driverTableName": {
               "type": "string"
             },
-            "appUsageTableName": {
-              "type": "string"
-            },
             "deviceColumns": {
               "type": "array"
             },
@@ -590,9 +501,6 @@
               "type": "array"
             },
             "driverColumns": {
-              "type": "array"
-            },
-            "appUsageColumns": {
               "type": "array"
             },
             "enterpriseAppObjectId": {
@@ -680,9 +588,6 @@
                   },
                   "[format('Custom-{0}', parameters('driverTableName'))]": {
                     "columns": "[parameters('driverColumns')]"
-                  },
-                  "[format('Custom-{0}', parameters('appUsageTableName'))]": {
-                    "columns": "[parameters('appUsageColumns')]"
                   }
                 },
                 "dataFlows": [
@@ -715,16 +620,6 @@
                     ],
                     "transformKql": "source | extend TimeGenerated = now()",
                     "outputStream": "[format('Custom-{0}', parameters('driverTableName'))]"
-                  },
-                  {
-                    "streams": [
-                      "[format('Custom-{0}', parameters('appUsageTableName'))]"
-                    ],
-                    "destinations": [
-                      "la-destination"
-                    ],
-                    "transformKql": "source | extend TimeGenerated = now()",
-                    "outputStream": "[format('Custom-{0}', parameters('appUsageTableName'))]"
                   }
                 ]
               },

@@ -58,7 +58,6 @@ param enterpriseAppObjectId string = ''
 var deviceTableName   = 'PowerStacksDeviceInventory_CL'
 var appTableName      = 'PowerStacksAppInventory_CL'
 var driverTableName   = 'PowerStacksDriverInventory_CL'
-var appUsageTableName = 'PowerStacksAppUsage_CL'
 
 // ==================================================
 // Schemas (columns defined once, reused)
@@ -112,25 +111,6 @@ var driverColumns = [
   { name: 'ListedDrivers8_s', type: 'string' }
   { name: 'ListedDrivers9_s', type: 'string' }
   { name: 'ListedDrivers10_s', type: 'string' }
-]
-
-var appUsageColumns = [
-  { name: 'TimeGenerated',      type: 'datetime' }
-  { name: 'ComputerName_s',     type: 'string' }
-  { name: 'ManagedDeviceID_g',  type: 'string' }
-  { name: 'UserSid_s',          type: 'string' }
-  { name: 'UserSidType_s',      type: 'string' }
-  { name: 'AadUserId_g',        type: 'string' }
-  { name: 'UPN_s',              type: 'string' }
-  { name: 'UserName_s',         type: 'string' }
-  { name: 'ResolvedAppName_s',  type: 'string' }
-  { name: 'Publisher_s',        type: 'string' }
-  { name: 'ProductCode_g',      type: 'string' }
-  { name: 'ExeInfo_s',          type: 'string' }
-  { name: 'ResolutionSource_s', type: 'string' }
-  { name: 'LastUsedTime',       type: 'datetime' }
-  { name: 'FirstSeen',          type: 'datetime' }
-  { name: 'InFocusSeconds',     type: 'int' }
 ]
 
 // ==================================================
@@ -219,11 +199,10 @@ resource driverTableNew 'Microsoft.OperationalInsights/workspaces/tables@2022-10
   }
 }
 
-// The PowerStacksAppUsage_CL table is intentionally NOT created here. App Usage
-// is a separate, optional add-on; its table is created by the intune-app-usage
-// repo (New-PowerStacksAppUsageTable.ps1) during App Usage onboarding. The DCR
-// below keeps the AppUsage stream and dataFlow so the shared DCR stays ready to
-// route App Usage data. If appUsageColumns changes, update that script to match.
+// App Usage is a fully separate, optional add-on. Its table, stream, and DCR are
+// all created by the intune-app-usage repo (New-PowerStacksAppUsageTable.ps1),
+// which adds its own dedicated DCR that reuses this deployment's DCE. Nothing
+// about App Usage lives in this Enhanced Inventory template.
 
 resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (workspaceMode == 'CreateNew') {
   name: dcrName
@@ -250,7 +229,6 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
       'Custom-${deviceTableName}':   { columns: deviceColumns }
       'Custom-${appTableName}':      { columns: appColumns }
       'Custom-${driverTableName}':   { columns: driverColumns }
-      'Custom-${appUsageTableName}': { columns: appUsageColumns }
     }
 
     dataFlows: [
@@ -271,12 +249,6 @@ resource dcrNew 'Microsoft.Insights/dataCollectionRules@2024-03-11' = if (worksp
         destinations: [ 'la-destination' ]
         transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${driverTableName}'
-      }
-      {
-        streams: [ 'Custom-${appUsageTableName}' ]
-        destinations: [ 'la-destination' ]
-        transformKql: 'source | extend TimeGenerated = now()'
-        outputStream: 'Custom-${appUsageTableName}'
       }
     ]
   }
@@ -315,12 +287,10 @@ module existingWorkspaceTablesAndDcr 'modules/workspaceTablesAndDcr.bicep' = if 
     deviceTableName:   deviceTableName
     appTableName:      appTableName
     driverTableName:   driverTableName
-    appUsageTableName: appUsageTableName
 
     deviceColumns:   deviceColumns
     appColumns:      appColumns
     driverColumns:   driverColumns
-    appUsageColumns: appUsageColumns
 
     enterpriseAppObjectId: enterpriseAppObjectId
   }

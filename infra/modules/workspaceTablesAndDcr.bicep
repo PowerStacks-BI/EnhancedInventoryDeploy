@@ -8,12 +8,10 @@ param location string
 param deviceTableName string
 param appTableName string
 param driverTableName string
-param appUsageTableName string
 
 param deviceColumns array
 param appColumns array
 param driverColumns array
-param appUsageColumns array
 
 @description('Optional. Object ID of the Enterprise Application (service principal). NOT the Application (Client) ID. If provided, the module assigns DCR permissions automatically.')
 param enterpriseAppObjectId string = ''
@@ -69,11 +67,10 @@ resource driverTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01
   }
 }
 
-// The PowerStacksAppUsage_CL table is intentionally NOT created here. App Usage
-// is a separate, optional add-on; its table is created by the intune-app-usage
-// repo (New-PowerStacksAppUsageTable.ps1). The DCR below keeps the AppUsage
-// stream and dataFlow so the shared DCR stays ready to route App Usage data.
-// If appUsageColumns changes, update that script to match.
+// App Usage is a fully separate, optional add-on. Its table, stream, and DCR are
+// created by the intune-app-usage repo (New-PowerStacksAppUsageTable.ps1), which
+// adds its own dedicated DCR that reuses the DCE created here. Nothing about App
+// Usage lives in this Enhanced Inventory template.
 
 resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
   name: dcrName
@@ -100,7 +97,6 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
       'Custom-${deviceTableName}':   { columns: deviceColumns }
       'Custom-${appTableName}':      { columns: appColumns }
       'Custom-${driverTableName}':   { columns: driverColumns }
-      'Custom-${appUsageTableName}': { columns: appUsageColumns }
     }
 
     dataFlows: [
@@ -121,12 +117,6 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
         destinations: [ 'la-destination' ]
         transformKql: 'source | extend TimeGenerated = now()'
         outputStream: 'Custom-${driverTableName}'
-      }
-      {
-        streams: [ 'Custom-${appUsageTableName}' ]
-        destinations: [ 'la-destination' ]
-        transformKql: 'source | extend TimeGenerated = now()'
-        outputStream: 'Custom-${appUsageTableName}'
       }
     ]
   }
