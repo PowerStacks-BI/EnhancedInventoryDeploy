@@ -11,7 +11,7 @@ The deployment creates (or reuses) a **Log Analytics Workspace**, configures req
 Click the button below to deploy the required Azure resources:
 
 <p>
-  <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpowerstacks-corp%2FEnhancedInventoryDeploy%2Fmain%2Finfra%2Fmain.json">
+  <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fpowerstacks-corp%2FEnhancedInventoryDeploy%2Fmain%2Finfra%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fpowerstacks-corp%2FEnhancedInventoryDeploy%2Fmain%2Finfra%2FcreateUiDefinition.json">
     <img src="https://aka.ms/deploytoazurebutton" alt="Deploy to Azure">
   </a>
 </p>
@@ -256,7 +256,7 @@ PowerStacksAppUsage_CL
 
 - `infra/main.bicep` – Source Bicep template
 - `infra/main.json` – Compiled ARM template used by the portal
-- `infra/createUiDefinition.json` – Custom UI definition (used for managed app scenarios)
+- `infra/createUiDefinition.json` – Portal wizard for the Deploy to Azure button (validates the workspace name and collects the DCE/DCR names and optional Enterprise Application Object ID)
 
 ---
 

@@ -18,7 +18,9 @@ param location string = resourceGroup().location
 // New workspace (CreateNew)
 // ---------------------------
 
-@description('Name of the new Log Analytics workspace. Only used when WorkspaceMode is set to CreateNew. Ignored when using an existing workspace.')
+@description('Name of the new Log Analytics workspace. Only used when WorkspaceMode is set to CreateNew. Ignored when using an existing workspace. Azure allows 4 to 63 characters using letters, numbers, and hyphens only (no underscores or spaces), and the name must start and end with a letter or number.')
+@minLength(4)
+@maxLength(63)
 param newWorkspaceName string = 'law-PowerStacksEnhancedInventory'
 
 // ---------------------------
