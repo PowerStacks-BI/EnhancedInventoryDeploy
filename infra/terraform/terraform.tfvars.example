@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars and fill in.
+
+# Existing Log Analytics workspace to deploy into.
+workspace_name                = "law-YourWorkspace"
+workspace_resource_group_name = "rg-monitoring"
+
+# Optional. Override the default DCE/DCR names if your naming standard differs.
+# dce_name = "dce-PowerStacksInventory"
+# dcr_name = "dcr-PowerStacksInventory"
+
+# Optional. Enterprise Application (service principal) Object ID that writes
+# inventory. When set, Terraform assigns Monitoring Metrics Publisher on the DCR.
+# This is the Enterprise App Object ID, NOT the Application (Client) ID.
+# enterprise_app_object_id = "00000000-0000-0000-0000-000000000000"

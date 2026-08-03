@@ -1,0 +1,12 @@
+# Local Terraform state and working directories
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Variable files with real values (keep terraform.tfvars.example)
+terraform.tfvars
+*.auto.tfvars
+
+# The lock file (.terraform.lock.hcl) is intentionally NOT ignored; commit it.
